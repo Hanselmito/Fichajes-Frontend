@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient, getErrorMessage } from '../api/client'
+import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import type { paths } from '../api/generated'
 
@@ -7,7 +7,7 @@ type DashboardResponse =
   paths['/dashboard']['get']['responses']['200']['content']['application/json']
 
 async function loadDashboard(): Promise<DashboardResponse> {
-  const result = await apiClient.GET('/dashboard')
+  const result = await withAccessRefresh(() => apiClient.GET('/dashboard'))
 
   if (result.error || !result.data?.success) {
     throw new Error(getErrorMessage(result.error, 'No se pudo cargar el dashboard'))

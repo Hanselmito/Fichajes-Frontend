@@ -3,8 +3,18 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react'
-import { apiClient, getErrorMessage } from '../api/client'
-import { clearStoredToken, storeToken } from './session'
+import {
+  apiClient,
+  getErrorMessage,
+  setAuthFailureHandler,
+  withAccessRefresh,
+} from '../api/client'
+import {
+  clearStoredSession,
+  getStoredRefreshToken,
+  getStoredSession,
+  storeSession,
+} from './session'
 import type { paths } from '../api/generated'
 import { AuthContext, type Capabilities, type UserDetails } from './context'
 
@@ -16,8 +26,8 @@ async function requestSession(): Promise<{
   capabilities: Capabilities
 }> {
   const [meResult, capabilitiesResult] = await Promise.all([
-    apiClient.GET('/auth/me'),
-    apiClient.GET('/auth/capabilities'),
+    withAccessRefresh(() => apiClient.GET('/auth/me')),
+    withAccessRefresh(() => apiClient.GET('/auth/capabilities')),
   ])
 
   if (meResult.error || !meResult.data?.success) {
@@ -41,6 +51,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<UserDetails | null>(null)
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null)
 
+  const clearAuthState = () => {
+    clearStoredSession()
+    setUser(null)
+    setCapabilities(null)
+  }
+
   const refreshSession = async () => {
     const session = await requestSession()
     setUser(session.user)
@@ -57,31 +73,52 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const loginData = result.data as LoginResponse
-    storeToken(loginData.token)
+    storeSession({
+      accessToken: loginData.access_token,
+      refreshToken: loginData.refresh_token,
+    })
     await refreshSession()
   }
 
   const logout = async () => {
+    const refreshToken = getStoredRefreshToken()
+
     try {
-      await apiClient.POST('/auth/logout')
+      if (refreshToken) {
+        await apiClient.POST('/auth/logout', {
+          body: { refreshToken },
+        })
+      } else {
+        await apiClient.POST('/auth/logout')
+      }
     } finally {
-      clearStoredToken()
-      setUser(null)
-      setCapabilities(null)
+      clearAuthState()
     }
   }
 
   useEffect(() => {
     let cancelled = false
 
+    setAuthFailureHandler(() => {
+      if (!cancelled) {
+        clearAuthState()
+      }
+    })
+
     async function restoreSession() {
+      if (!getStoredSession()) {
+        if (!cancelled) {
+          setInitializing(false)
+        }
+
+        return
+      }
+
       try {
         await refreshSession()
       } catch {
-        clearStoredToken()
         if (!cancelled) {
-          setUser(null)
-          setCapabilities(null)
+          clearAuthState()
         }
       } finally {
         if (!cancelled) {
@@ -94,6 +131,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     return () => {
       cancelled = true
+      setAuthFailureHandler(null)
     }
   }, [])
 
