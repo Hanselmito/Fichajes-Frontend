@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Healthcheck de la API */
+        /** Healthcheck de la API y la base de datos */
         get: operations["getHealth"];
         put?: never;
         post?: never;
@@ -32,6 +32,23 @@ export interface paths {
         put?: never;
         /** Iniciar sesion */
         post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Renovar sesion con rotacion de refresh token */
+        post: operations["refreshSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -81,7 +98,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cerrar sesion logica del cliente */
+        /** Cerrar sesion y revocar el access token actual */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -1416,6 +1433,13 @@ export interface components {
             success: boolean;
             /** @example API Laravel lista */
             message: string;
+            checks?: {
+                [key: string]: {
+                    /** @enum {string} */
+                    status?: "up" | "down";
+                    driver?: string;
+                };
+            };
         };
         ErrorResponse: {
             /** @example false */
@@ -2218,10 +2242,22 @@ export interface components {
             username: string;
             password: string;
         };
-        LoginResponse: {
+        RefreshRequest: {
+            refreshToken: string;
+        };
+        LogoutRequest: {
+            refreshToken?: string;
+        };
+        AuthSessionResponse: {
             success: boolean;
             message: string;
             token: string;
+            access_token: string;
+            refresh_token: string;
+            /** @example Bearer */
+            token_type: string;
+            expires_in: number;
+            refresh_expires_in: number;
             user: components["schemas"]["UserDetails"];
         };
         MeResponse: {
@@ -2821,6 +2857,21 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
+        /** @description Demasiados intentos en una ventana corta de tiempo */
+        TooManyRequests: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "success": false,
+                 *       "message": "Demasiados intentos de login. Intentalo de nuevo en unos instantes."
+                 *     }
+                 */
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
         /** @description Error de validacion */
         ValidationError: {
             headers: {
@@ -2877,6 +2928,15 @@ export interface operations {
                     "application/json": components["schemas"]["HealthResponse"];
                 };
             };
+            /** @description Alguna dependencia requerida no esta disponible */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
         };
     };
     login: {
@@ -2898,7 +2958,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginResponse"];
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Sesion renovada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -2954,7 +3041,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequest"];
+            };
+        };
         responses: {
             /** @description Logout correcto */
             200: {
@@ -2966,6 +3057,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listUsers: {
