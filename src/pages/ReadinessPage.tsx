@@ -1,17 +1,14 @@
 import { readinessChecklist } from '../config/readiness'
+import { PageHeader } from '../components/PageHeader'
 
 export function ReadinessPage() {
   return (
     <>
-      <header className="page-header">
-        <div>
-          <span className="eyebrow">Checklist exacto</span>
-          <h1 className="page-title">Backend ready for React</h1>
-          <p className="page-subtitle">
-            Estado actual del backend pensando en integracion real con este cliente React.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Checklist exacto"
+        subtitle="Estado actual del backend pensando en integracion real con este cliente React."
+        title="Backend ready for React"
+      />
 
       {readinessChecklist.map((section) => (
         <section className="table-card" key={section.title}>

@@ -1,28 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-
-const sectionLabels: Record<string, string> = {
-  dashboard: 'Dashboard',
-  records: 'Fichajes',
-  reports: 'Reportes',
-  vacations: 'Vacaciones legacy',
-  vacation_requests: 'Solicitudes de vacaciones',
-  user_overview: 'Resumen de empleados',
-  zones: 'Zonas',
-  users: 'Usuarios',
-  clients: 'Clientes',
-  quadrants: 'Cuadrantes',
-  schedules: 'Horarios',
-  employee_schedules: 'Historial de horarios',
-  services: 'Servicios',
-  calendars: 'Calendarios',
-  zone_holidays: 'Festivos de zona',
-  tolerance: 'Tolerancias',
-  bolsa_anotaciones: 'Bolsa de horas',
-  notifications: 'Notificaciones',
-  breaks: 'Descansos',
-  modifications: 'Modificaciones',
-}
+import { sectionLabels } from '../config/navigation'
+import brandMark from '../assets/brand-mark.svg'
 
 export function AppShell() {
   const { user, capabilities, logout } = useAuth()
@@ -38,7 +17,7 @@ export function AppShell() {
       <header className="app-header">
         <div className="header-content">
           <div className="header-brand">
-            <div className="brand-mark">FP</div>
+            <img alt="Fichaje" className="brand-logo" src={brandMark} />
             <div className="brand-copy">
               <h1>Sistema de Fichaje</h1>
               <p>Frontend React inspirado en el panel legacy</p>
@@ -54,7 +33,12 @@ export function AppShell() {
             <div className="header-action-group">
               <div className="header-action-btn header-user-trigger">
                 <span className="header-user-avatar">
-                  {user?.name?.slice(0, 2).toUpperCase() ?? 'SA'}
+                  {user?.name
+                    ?.split(' ')
+                    .map((chunk: string) => chunk[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase() ?? 'SA'}
                 </span>
                 <span className="header-user-copy">
                   <strong>{user?.name ?? 'Sesion activa'}</strong>

@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { PageHeader } from '../components/PageHeader'
 
 export function PlaceholderPage() {
   const { sectionId } = useParams<{ sectionId: string }>()
@@ -8,16 +9,11 @@ export function PlaceholderPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div>
-          <span className="eyebrow">Plantilla inicial</span>
-          <h1 className="page-title">{sectionId ?? 'Seccion'}</h1>
-          <p className="page-subtitle">
-            Ruta reservada para seguir montando la UI real del modulo sin volver a tocar la base de
-            auth, contrato ni cliente OpenAPI.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Plantilla inicial"
+        subtitle="Ruta reservada para seguir montando la UI real del modulo sin volver a tocar la base de auth, contrato ni cliente OpenAPI."
+        title={sectionId ?? 'Seccion'}
+      />
 
       <section className="section-grid">
         <article className="section-card">
