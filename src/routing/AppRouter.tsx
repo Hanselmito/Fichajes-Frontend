@@ -2,11 +2,15 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '../auth/AuthProvider'
 import { useAuth } from '../auth/useAuth'
 import { AppShell } from '../components/AppShell'
+import { ClientsPage } from '../pages/ClientsPage'
 import { ContractPage } from '../pages/ContractPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { LoginPage } from '../pages/LoginPage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
+import { QuadrantsPage } from '../pages/QuadrantsPage'
+import { RecordsPage } from '../pages/RecordsPage'
 import { ReadinessPage } from '../pages/ReadinessPage'
+import { UsersPage } from '../pages/UsersPage'
 
 function ProtectedRoutes() {
   const { initializing, isAuthenticated } = useAuth()
@@ -23,6 +27,10 @@ function ProtectedRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<DashboardPage />} />
+        <Route path="records" element={<RecordsPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="clients" element={<ClientsPage />} />
+        <Route path="quadrants" element={<QuadrantsPage />} />
         <Route path="contract" element={<ContractPage />} />
         <Route path="readiness" element={<ReadinessPage />} />
         <Route path="workspace/:sectionId" element={<PlaceholderPage />} />
