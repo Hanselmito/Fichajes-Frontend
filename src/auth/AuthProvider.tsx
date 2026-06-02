@@ -3,48 +3,11 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react'
-import {
-  apiClient,
-  getErrorMessage,
-  setAuthFailureHandler,
-  withAccessRefresh,
-} from '../api/client'
-import {
-  clearStoredSession,
-  getStoredRefreshToken,
-  getStoredSession,
-  storeSession,
-} from './session'
-import type { paths } from '../api/generated'
-import { AuthContext, type Capabilities, type UserDetails } from './context'
-
-type LoginResponse =
-  paths['/auth/login']['post']['responses']['200']['content']['application/json']
-
-async function requestSession(): Promise<{
-  user: UserDetails
-  capabilities: Capabilities
-}> {
-  const [meResult, capabilitiesResult] = await Promise.all([
-    withAccessRefresh(() => apiClient.GET('/auth/me')),
-    withAccessRefresh(() => apiClient.GET('/auth/capabilities')),
-  ])
-
-  if (meResult.error || !meResult.data?.success) {
-    throw new Error(getErrorMessage(meResult.error, 'No se pudo recuperar la sesion'))
-  }
-
-  if (capabilitiesResult.error || !capabilitiesResult.data?.success) {
-    throw new Error(
-      getErrorMessage(capabilitiesResult.error, 'No se pudieron recuperar las capacidades'),
-    )
-  }
-
-  return {
-    user: meResult.data.user,
-    capabilities: capabilitiesResult.data.capabilities,
-  }
-}
+import { setAuthFailureHandler } from '../api/client'
+import { clearStoredSession, getStoredSession } from './session'
+import { AuthContext } from './context'
+import { loginWithCredentials, logoutCurrentSession, requestSession } from '../services/authService'
+import type { Capabilities, UserDetails } from '../types/auth'
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [initializing, setInitializing] = useState(true)
@@ -64,33 +27,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   const login = async (username: string, password: string) => {
-    const result = await apiClient.POST('/auth/login', {
-      body: { username, password },
-    })
-
-    if (result.error || !result.data?.success) {
-      throw new Error(getErrorMessage(result.error, 'Login no valido'))
-    }
-
-    const loginData = result.data as LoginResponse
-    storeSession({
-      accessToken: loginData.access_token,
-      refreshToken: loginData.refresh_token,
-    })
+    await loginWithCredentials(username, password)
     await refreshSession()
   }
 
   const logout = async () => {
-    const refreshToken = getStoredRefreshToken()
-
     try {
-      if (refreshToken) {
-        await apiClient.POST('/auth/logout', {
-          body: { refreshToken },
-        })
-      } else {
-        await apiClient.POST('/auth/logout')
-      }
+      await logoutCurrentSession()
     } finally {
       clearAuthState()
     }

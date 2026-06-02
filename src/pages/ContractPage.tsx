@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from '../api/config'
+import { PageHeader } from '../components/PageHeader'
 
 const keyEndpoints = [
   'POST /auth/login',
@@ -14,16 +15,11 @@ const keyEndpoints = [
 export function ContractPage() {
   return (
     <>
-      <header className="page-header">
-        <div>
-          <span className="eyebrow">Contrato</span>
-          <h1 className="page-title">Consumo del backend</h1>
-          <p className="page-subtitle">
-            La plantilla ya queda alineada con el contrato Laravel: bearer token, `success` como
-            semaforo funcional y tipos generados desde OpenAPI.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Contrato"
+        subtitle="La plantilla queda alineada con el contrato Laravel: bearer token, success como semaforo funcional y tipos generados desde OpenAPI."
+        title="Consumo del backend"
+      />
 
       <section className="contract-grid">
         <article className="section-card">

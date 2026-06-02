@@ -1,20 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 import { useAuth } from '../auth/useAuth'
-import type { paths } from '../api/generated'
-
-type DashboardResponse =
-  paths['/dashboard']['get']['responses']['200']['content']['application/json']
-
-async function loadDashboard(): Promise<DashboardResponse> {
-  const result = await withAccessRefresh(() => apiClient.GET('/dashboard'))
-
-  if (result.error || !result.data?.success) {
-    throw new Error(getErrorMessage(result.error, 'No se pudo cargar el dashboard'))
-  }
-
-  return result.data
-}
+import { loadDashboard } from '../services/dashboardService'
+import { PageHeader } from '../components/PageHeader'
+import { DashboardEmployeeCard } from '../components/DashboardEmployeeCard'
 
 export function DashboardPage() {
   const { capabilities, user } = useAuth()
@@ -24,6 +12,7 @@ export function DashboardPage() {
   })
   const todaySummary = dashboardQuery.data?.checkins_summary?.today
   const historySummary = dashboardQuery.data?.checkins_summary?.history ?? []
+  const employeeCards = dashboardQuery.data?.employees.slice(0, 6) ?? []
 
   const visibleSections = Object.entries(capabilities?.navigation ?? {})
     .filter(([, visible]) => visible)
@@ -31,24 +20,20 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div>
-          <span className="eyebrow">Operativo</span>
-          <h1 className="page-title">Dashboard de arranque</h1>
-          <p className="page-subtitle">
-            Estado inicial del backend conectado para el usuario {user?.name}. Esta pantalla ya
-            consume `GET /dashboard` y refleja la superficie visible segun permisos reales.
-          </p>
-        </div>
-
-        <a className="ghost-link" href="https://react.dev" rel="noreferrer" target="_blank">
-          React stack
-        </a>
-      </header>
+      <PageHeader
+        action={
+          <span className="ghost-link dashboard-scope-pill">
+            {visibleSections.length} modulos visibles
+          </span>
+        }
+        eyebrow="Operativo"
+        subtitle={`Estado inicial del backend conectado para ${user?.name}. Esta vista se apoya en los datos reales de GET /dashboard y en el lenguaje visual del panel legacy.`}
+        title="Panel general"
+      />
 
       <section className="metric-grid">
         <article className="metric-card">
-          <span>Personas listadas</span>
+          <span>Total empleados</span>
           <p className="metric-value">{dashboardQuery.data?.total ?? '—'}</p>
         </article>
         <article className="metric-card">
@@ -65,11 +50,28 @@ export function DashboardPage() {
         </article>
       </section>
 
-      <section className="section-grid">
-        <article className="section-card">
-          <strong>Capacidades visibles</strong>
+      <section className="legacy-dashboard-grid">
+        <article className="section-card section-card-highlight">
+          <strong>Resumen operativo del dia</strong>
           <p className="panel-copy">
-            {visibleSections.length} secciones activas para este usuario.
+            Hoy: {todaySummary?.total ?? 0} fichajes confirmados · pendientes: {todaySummary?.pending ?? 0}
+          </p>
+
+          <div className="history-strip">
+            {historySummary.map((entry) => (
+              <div className="history-strip-item" key={entry.date}>
+                <strong>{entry.total}</strong>
+                <span>{entry.label}</span>
+                <small>{entry.pending} pendientes</small>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="section-card">
+          <strong>Navegacion permitida</strong>
+          <p className="panel-copy">
+            Secciones efectivamente visibles para este rol y este alcance de zona.
           </p>
           <div className="capability-grid">
             {visibleSections.map((section) => (
@@ -79,30 +81,18 @@ export function DashboardPage() {
             ))}
           </div>
         </article>
-
-        <article className="section-card">
-          <strong>Checkins recientes</strong>
-          <p className="panel-copy">
-            Hoy: {todaySummary?.total ?? 0} fichajes · pendientes: {todaySummary?.pending ?? 0}
-          </p>
-          <div className="capability-grid">
-            {historySummary.map((entry) => (
-              <div className="panel" key={entry.date}>
-                <strong>{entry.label}</strong>
-                <span className="meta-value">
-                  {entry.total} total · {entry.pending} pendientes
-                </span>
-              </div>
-            ))}
-          </div>
-        </article>
       </section>
 
       <section className="table-card">
-        <strong>Resumen de empleados</strong>
-        <p className="table-note">
-          Vista inicial para verificar que el frontend ya entiende el payload real del dashboard.
-        </p>
+        <div className="section-head-row">
+          <div>
+            <strong>Resumen de empleados</strong>
+            <p className="table-note">
+              Tarjetas operativas inspiradas en el overview del panel original.
+            </p>
+          </div>
+          <span className="status-pill">{dashboardQuery.data?.employees.length ?? 0} visibles</span>
+        </div>
 
         {dashboardQuery.isLoading ? <p className="empty-text">Cargando dashboard...</p> : null}
         {dashboardQuery.isError ? (
@@ -110,41 +100,11 @@ export function DashboardPage() {
         ) : null}
 
         {dashboardQuery.data ? (
-          <table className="employee-table">
-            <thead>
-              <tr>
-                <th>Empleado</th>
-                <th>Estado</th>
-                <th>Cliente actual</th>
-                <th>Siguiente visita</th>
-                <th>Horas semana</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dashboardQuery.data.employees.map((employee) => (
-                <tr key={employee.id}>
-                  <td>
-                    <div className="meta-stack">
-                      <span className="employee-name">{employee.name}</span>
-                      <span>{employee.role}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`status-pill ${employee.status_display_tone}`}>
-                      {employee.status_display_label}
-                    </span>
-                  </td>
-                  <td>{employee.current_client_name ?? 'Sin visita en curso'}</td>
-                  <td>
-                    {employee.next_assignment
-                      ? `${employee.next_assignment.client_name} · ${employee.next_assignment.start_time}`
-                      : 'Sin proxima asignacion'}
-                  </td>
-                  <td>{employee.hours_worked_week}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="employee-overview-grid-list">
+            {employeeCards.map((employee) => (
+              <DashboardEmployeeCard employee={employee} key={employee.id} />
+            ))}
+          </div>
         ) : null}
       </section>
     </>

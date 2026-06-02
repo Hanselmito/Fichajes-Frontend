@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { loginFeatureCards } from '../config/navigation'
+import brandMark from '../assets/brand-mark.svg'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const [username, setUsername] = useState('admin')
-  const [password, setPassword] = useState('password')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,7 +32,7 @@ export function LoginPage() {
     <div className="login-shell">
       <section className="hero-panel">
         <div className="login-brand-block">
-          <div className="brand-mark login-brand-mark">FP</div>
+          <img alt="Fichaje" className="brand-logo login-brand-logo" src={brandMark} />
           <div>
             <span className="eyebrow">Panel de acceso</span>
             <h1 className="hero-title">Sistema de Fichaje Profesional</h1>
@@ -46,18 +48,12 @@ export function LoginPage() {
         </div>
 
         <div className="feature-list">
-          <div className="feature-item">
-            <strong>Estilo base legacy</strong>
-            <span>Cabecera clara, tarjetas blancas, navegacion lateral y acentos azules.</span>
-          </div>
-          <div className="feature-item">
-            <strong>Contrato unico</strong>
-            <span>Tipos generados desde `../fichaje-backend/docs/openapi.yaml`.</span>
-          </div>
-          <div className="feature-item">
-            <strong>Sesion moderna</strong>
-            <span>Access token corto con refresh flow y restauracion automatica.</span>
-          </div>
+          {loginFeatureCards.map((feature) => (
+            <div className="feature-item" key={feature.title}>
+              <strong>{feature.title}</strong>
+              <span>{feature.detail}</span>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -76,7 +72,9 @@ export function LoginPage() {
             <label htmlFor="username">Usuario</label>
             <input
               id="username"
+              autoComplete="username"
               onChange={(event) => setUsername(event.target.value)}
+              placeholder="Introduce tu usuario"
               value={username}
             />
           </div>
@@ -85,7 +83,9 @@ export function LoginPage() {
             <label htmlFor="password">Contrasena</label>
             <input
               id="password"
+              autoComplete="current-password"
               onChange={(event) => setPassword(event.target.value)}
+              placeholder="Introduce tu contrasena"
               type="password"
               value={password}
             />
