@@ -29,27 +29,34 @@ export function LoginPage() {
   return (
     <div className="login-shell">
       <section className="hero-panel">
+        <div className="login-brand-block">
+          <div className="brand-mark login-brand-mark">FP</div>
+          <div>
+            <span className="eyebrow">Panel de acceso</span>
+            <h1 className="hero-title">Sistema de Fichaje Profesional</h1>
+          </div>
+        </div>
+
         <div>
-          <span className="eyebrow">React + OpenAPI</span>
-          <h1 className="hero-title">Cliente inicial para Fichaje.</h1>
           <p className="hero-copy">
-            Esta base ya arranca con autenticacion, restauracion de sesion, cliente tipado y
+            Esta version React toma como referencia visual el `index.html` legacy y mantiene el
+            contrato nuevo del backend Laravel: autenticacion, restauracion de sesion y
             navegacion derivada de `capabilities`.
           </p>
         </div>
 
         <div className="feature-list">
           <div className="feature-item">
+            <strong>Estilo base legacy</strong>
+            <span>Cabecera clara, tarjetas blancas, navegacion lateral y acentos azules.</span>
+          </div>
+          <div className="feature-item">
             <strong>Contrato unico</strong>
-            <span>Genera tipos desde `../fichaje-backend/docs/openapi.yaml`.</span>
+            <span>Tipos generados desde `../fichaje-backend/docs/openapi.yaml`.</span>
           </div>
           <div className="feature-item">
-            <strong>Guardias reales</strong>
-            <span>Menus y accesos construidos desde `GET /auth/capabilities`.</span>
-          </div>
-          <div className="feature-item">
-            <strong>Proxy local</strong>
-            <span>Vite reenvia `/api` al backend Laravel para desarrollo sencillo.</span>
+            <strong>Sesion moderna</strong>
+            <span>Access token corto con refresh flow y restauracion automatica.</span>
           </div>
         </div>
       </section>
@@ -57,9 +64,10 @@ export function LoginPage() {
       <section className="login-panel">
         <div>
           <span className="eyebrow">Acceso</span>
-          <h2 className="section-title">Entrar al backend</h2>
+          <h2 className="section-title">Entrar al panel</h2>
           <p className="panel-copy">
-            Usa un usuario real de la base de datos legacy o deja el admin local para pruebas.
+            Usa un usuario real de la base legacy para comprobar permisos, dashboard y renovacion
+            automatica de sesion.
           </p>
         </div>
 
@@ -93,7 +101,7 @@ export function LoginPage() {
         </form>
 
         <div className="hint-box">
-          Backend esperado: `http://127.0.0.1:8000/api` por proxy local de Vite.
+          Backend esperado: `http://127.0.0.1:8000/api` por proxy local de Vite en `5173`.
         </div>
       </section>
     </div>

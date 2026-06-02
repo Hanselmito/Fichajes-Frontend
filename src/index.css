@@ -1,29 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
-
 :root {
-  --bg: #f4efe8;
-  --bg-strong: #fffaf3;
-  --panel: rgba(255, 250, 243, 0.82);
-  --panel-strong: #fffdf8;
-  --ink: #1f241d;
-  --muted: #666d64;
-  --line: rgba(54, 63, 44, 0.14);
-  --brand: #0f766e;
-  --brand-soft: rgba(15, 118, 110, 0.12);
+  --ink: #24324d;
+  --muted: #6b7a90;
+  --line: rgba(111, 130, 186, 0.14);
+  --brand: #3155b7;
+  --brand-soft: #eef4ff;
   --warning: #c26a1b;
-  --danger: #a23a2f;
-  --shadow: 0 22px 60px rgba(52, 43, 30, 0.12);
-  --radius-xl: 28px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --font-body: 'IBM Plex Sans', sans-serif;
-  --font-heading: 'Space Grotesk', sans-serif;
+  --danger: #b42318;
   color: var(--ink);
-  background:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.18), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(194, 106, 27, 0.18), transparent 28%),
-    linear-gradient(180deg, #f7f1e8 0%, #f1ebe2 100%);
-  font-family: var(--font-body);
+  background: linear-gradient(135deg, #ffffff 0%, #d1d1d1 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
