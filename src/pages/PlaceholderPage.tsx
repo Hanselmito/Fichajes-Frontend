@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { PageHeader } from '../components/PageHeader'
+import { getSectionPath } from '../services/navigationService'
 
 export function PlaceholderPage() {
   const { sectionId } = useParams<{ sectionId: string }>()
@@ -35,6 +36,10 @@ export function PlaceholderPage() {
               ? 'Sin limite efectivo'
               : resourceAccess?.zone_scope?.join(', ') || 'Sin scope transversal'}
           </p>
+        </article>
+        <article className="section-card">
+          <strong>Ruta resuelta</strong>
+          <p className="panel-copy">{getSectionPath(sectionId ?? '')}</p>
         </article>
       </section>
     </>

@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { sectionLabels } from '../config/navigation'
 import brandMark from '../assets/brand-mark.svg'
+import { getSectionPath } from '../services/navigationService'
 
 export function AppShell() {
   const { user, capabilities, logout } = useAuth()
@@ -82,7 +83,7 @@ export function AppShell() {
             </NavLink>
 
             {visibleSections.map(([key]) => (
-              <NavLink className="nav-link" key={key} to={`/workspace/${key}`}>
+              <NavLink className="nav-link" key={key} to={getSectionPath(key)}>
                 {sectionLabels[key] ?? key}
               </NavLink>
             ))}
