@@ -10,7 +10,9 @@ import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { QuadrantsPage } from '../pages/QuadrantsPage'
 import { RecordsPage } from '../pages/RecordsPage'
 import { ReadinessPage } from '../pages/ReadinessPage'
+import { ReportsPage } from '../pages/ReportsPage'
 import { UsersPage } from '../pages/UsersPage'
+import { ZonesPage } from '../pages/ZonesPage'
 
 function ProtectedRoutes() {
   const { initializing, isAuthenticated } = useAuth()
@@ -30,6 +32,8 @@ function ProtectedRoutes() {
         <Route path="records" element={<RecordsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="clients" element={<ClientsPage />} />
+        <Route path="zones" element={<ZonesPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="quadrants" element={<QuadrantsPage />} />
         <Route path="contract" element={<ContractPage />} />
         <Route path="readiness" element={<ReadinessPage />} />
