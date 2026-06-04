@@ -14,6 +14,7 @@ import { ReportsPage } from '../pages/ReportsPage'
 import { UsersPage } from '../pages/UsersPage'
 import { VacationsPage } from '../pages/VacationsPage'
 import { ZonesPage } from '../pages/ZonesPage'
+import { SchedulesPage } from '../pages/SchedulesPage'
 
 function ProtectedRoutes() {
   const { initializing, isAuthenticated } = useAuth()
@@ -37,6 +38,7 @@ function ProtectedRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="vacations" element={<VacationsPage />} />
         <Route path="quadrants" element={<QuadrantsPage />} />
+        <Route path="schedules" element={<SchedulesPage />} />
         <Route path="contract" element={<ContractPage />} />
         <Route path="readiness" element={<ReadinessPage />} />
         <Route path="workspace/:sectionId" element={<PlaceholderPage />} />

@@ -156,6 +156,20 @@ export async function loadVacationRequests(): Promise<import('../api/generated')
   return result.data.requests
 }
 
+export async function createVacationRequest(data: { type: 'vacaciones' | 'asuntos_propios'; startDate: string; endDate: string; reason?: string }): Promise<void> {
+  const result = await withAccessRefresh(() => apiClient.POST('/vacation-requests', {
+    body: {
+      type: data.type,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      reason: data.reason
+    }
+  }))
+  if (result.error || !result.data?.success) {
+    throw new Error(getErrorMessage(result.error, 'No se pudo crear la solicitud'))
+  }
+}
+
 export async function approveVacationRequest(requestId: number, reason: string = ''): Promise<void> {
   const result = await withAccessRefresh(() => apiClient.PUT('/vacation-requests/{requestId}/approve', {
     params: { path: { requestId } },
