@@ -7,11 +7,21 @@ import {
   rejectVacationRequest,
   loadVacations,
   deleteVacation,
+  createVacationRequest,
 } from '../services/resourceService'
+import { useAuth } from '../auth/useAuth'
 
 export function VacationsPage() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<'requests' | 'confirmed'>('requests')
+  const [isFormVisible, setIsFormVisible] = useState(false)
+  const [formData, setFormData] = useState({
+    type: 'vacaciones' as 'vacaciones' | 'asuntos_propios',
+    startDate: '',
+    endDate: '',
+    reason: '',
+  })
 
   const requestsQuery = useQuery({
     queryKey: ['vacationRequests'],
@@ -26,7 +36,23 @@ export function VacationsPage() {
   const requests = requestsQuery.data ?? []
   const vacations = vacationsQuery.data ?? []
 
+  // If the user is an admin, they see all pending requests.
+  // If the user is an employee/coordinator, they only see their own requests.
+  // Assuming the backend handles this filtering, we just take the results.
   const pendingRequests = requests.filter(r => r.status === 'pendiente')
+
+  const createMutation = useMutation({
+    mutationFn: createVacationRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vacationRequests'] })
+      setIsFormVisible(false)
+      setFormData({ type: 'vacaciones', startDate: '', endDate: '', reason: '' })
+      window.alert('Solicitud enviada con éxito')
+    },
+    onError: (error: Error) => {
+      window.alert(error.message)
+    }
+  })
 
   const approveMutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) => approveVacationRequest(id, reason),
@@ -69,6 +95,11 @@ export function VacationsPage() {
     }
   }
 
+  const handleSubmitRequest = (e: React.FormEvent) => {
+    e.preventDefault()
+    createMutation.mutate(formData)
+  }
+
   return (
     <>
       <PageHeader
@@ -88,6 +119,51 @@ export function VacationsPage() {
         </article>
       </section>
 
+      {isFormVisible && (
+        <section className="table-card resource-shell-card" style={{ marginBottom: '2rem' }}>
+          <div className="section-head-row">
+            <div>
+              <strong>Nueva Solicitud</strong>
+              <p className="table-note">Pide vacaciones o asuntos propios.</p>
+            </div>
+            <button className="secondary-button" onClick={() => setIsFormVisible(false)} type="button">
+              Cancelar
+            </button>
+          </div>
+          <form onSubmit={handleSubmitRequest} style={{ padding: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>Tipo *</label>
+                <select required value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as typeof formData.type})}>
+                  <option value="vacaciones">Vacaciones</option>
+                  <option value="asuntos_propios">Asuntos Propios</option>
+                </select>
+              </div>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>Fecha Inicio *</label>
+                <input type="date" required value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} />
+              </div>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>Fecha Fin *</label>
+                <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} />
+              </div>
+            </div>
+            <div className="input-group" style={{ marginBottom: '1rem' }}>
+              <label>Motivo (opcional)</label>
+              <textarea 
+                value={formData.reason} 
+                onChange={e => setFormData({...formData, reason: e.target.value})} 
+                rows={2} 
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}
+              />
+            </div>
+            <button className="primary-button" disabled={createMutation.isPending} type="submit">
+              Enviar Solicitud
+            </button>
+          </form>
+        </section>
+      )}
+
       {activeTab === 'requests' && (
         <section className="table-card resource-shell-card">
           <div className="section-head-row">
@@ -95,6 +171,11 @@ export function VacationsPage() {
               <strong>Solicitudes de Empleados</strong>
               <p className="table-note">Peticiones de vacaciones o asuntos propios pendientes de revisión.</p>
             </div>
+            {(user?.role === 'employee' || user?.role === 'coordinator') && !isFormVisible && (
+              <button className="primary-button" onClick={() => setIsFormVisible(true)} type="button">
+                + Nueva Solicitud
+              </button>
+            )}
           </div>
 
           {requestsQuery.isLoading ? <p className="empty-text">Cargando solicitudes...</p> : null}
@@ -122,22 +203,29 @@ export function VacationsPage() {
                     <td style={{ padding: '1rem' }}>{req.days_count}</td>
                     <td style={{ padding: '1rem' }}>{req.reason || '-'}</td>
                     <td style={{ padding: '1rem', textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button 
-                        className="primary-button" 
-                        onClick={() => handleApprove(req.id!)}
-                        disabled={approveMutation.isPending}
-                        style={{ padding: '0.4rem 0.8rem', minHeight: 'auto' }}
-                      >
-                        Aprobar
-                      </button>
-                      <button 
-                        className="secondary-button" 
-                        onClick={() => handleReject(req.id!)}
-                        disabled={rejectMutation.isPending}
-                        style={{ padding: '0.4rem 0.8rem', minHeight: 'auto', color: '#e53e3e', borderColor: '#fc8181' }}
-                      >
-                        Rechazar
-                      </button>
+                      {user?.role === 'admin' && (
+                        <>
+                          <button 
+                            className="primary-button" 
+                            onClick={() => handleApprove(req.id!)}
+                            disabled={approveMutation.isPending}
+                            style={{ padding: '0.4rem 0.8rem', minHeight: 'auto' }}
+                          >
+                            Aprobar
+                          </button>
+                          <button 
+                            className="secondary-button" 
+                            onClick={() => handleReject(req.id!)}
+                            disabled={rejectMutation.isPending}
+                            style={{ padding: '0.4rem 0.8rem', minHeight: 'auto', color: '#e53e3e', borderColor: '#fc8181' }}
+                          >
+                            Rechazar
+                          </button>
+                        </>
+                      )}
+                      {user?.role !== 'admin' && (
+                         <span className="status-pill warning">Pendiente</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -192,13 +280,15 @@ export function VacationsPage() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                       <span className="status-pill success">{vacation.type}</span>
-                      <button 
-                        className="secondary-button" 
-                        onClick={() => handleDeleteVacation(vacation.id!)}
-                        style={{ padding: '0.2rem 0.5rem', color: '#e53e3e', borderColor: '#fc8181', fontSize: '0.8rem' }}
-                      >
-                        Eliminar
-                      </button>
+                      {user?.role === 'admin' && (
+                        <button 
+                          className="secondary-button" 
+                          onClick={() => handleDeleteVacation(vacation.id!)}
+                          style={{ padding: '0.2rem 0.5rem', color: '#e53e3e', borderColor: '#fc8181', fontSize: '0.8rem' }}
+                        >
+                          Eliminar
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="legacy-detail-grid">

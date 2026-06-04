@@ -10,6 +10,9 @@ export const sectionRouteMap: Record<string, string> = {
   vacations: '/vacations',
   vacation_requests: '/vacations',
   quadrants: '/quadrants',
+  schedules: '/schedules',
+  employee_schedules: '/schedules',
+  tolerance: '/schedules',
   contract: '/contract',
   readiness: '/readiness',
 }

@@ -258,22 +258,26 @@ export function UsersPage() {
                     <span className={`status-pill ${user.active ? 'success' : 'danger'}`}>
                       {user.role} · {user.active ? 'activo' : 'inactivo'}
                     </span>
-                    <button
-                      className="secondary-button"
-                      onClick={() => handleOpenForm(user)}
-                      type="button"
-                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="secondary-button"
-                      onClick={() => handleDelete(user.id)}
-                      type="button"
-                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#e53e3e', borderColor: '#fc8181' }}
-                    >
-                      Eliminar
-                    </button>
+                    {user.role !== 'admin' && (
+                      <>
+                        <button
+                          className="secondary-button"
+                          onClick={() => handleOpenForm(user)}
+                          type="button"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          className="secondary-button"
+                          onClick={() => handleDelete(user.id)}
+                          type="button"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#e53e3e', borderColor: '#fc8181' }}
+                        >
+                          Eliminar
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
