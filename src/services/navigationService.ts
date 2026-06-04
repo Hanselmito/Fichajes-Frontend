@@ -5,6 +5,8 @@ export const sectionRouteMap: Record<string, string> = {
   records: '/records',
   users: '/users',
   clients: '/clients',
+  zones: '/zones',
+  reports: '/reports',
   quadrants: '/quadrants',
   contract: '/contract',
   readiness: '/readiness',
