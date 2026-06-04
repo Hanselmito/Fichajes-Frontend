@@ -12,6 +12,7 @@ import { RecordsPage } from '../pages/RecordsPage'
 import { ReadinessPage } from '../pages/ReadinessPage'
 import { ReportsPage } from '../pages/ReportsPage'
 import { UsersPage } from '../pages/UsersPage'
+import { VacationsPage } from '../pages/VacationsPage'
 import { ZonesPage } from '../pages/ZonesPage'
 
 function ProtectedRoutes() {
@@ -34,6 +35,7 @@ function ProtectedRoutes() {
         <Route path="clients" element={<ClientsPage />} />
         <Route path="zones" element={<ZonesPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="vacations" element={<VacationsPage />} />
         <Route path="quadrants" element={<QuadrantsPage />} />
         <Route path="contract" element={<ContractPage />} />
         <Route path="readiness" element={<ReadinessPage />} />

@@ -1,17 +1,122 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { PageHeader } from '../components/PageHeader'
-import { loadUsers } from '../services/resourceService'
+import { loadUsers, createUser, updateUser, deleteUser, loadZones } from '../services/resourceService'
+import type { UserItem } from '../types/resources'
 
 export function UsersPage() {
+  const queryClient = useQueryClient()
+  const [editingUser, setEditingUser] = useState<UserItem | null>(null)
+  const [isFormVisible, setIsFormVisible] = useState(false)
+
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    name: '',
+    email: '',
+    phone: '',
+    dni: '',
+    role: 'employee' as 'admin' | 'coordinator' | 'employee',
+    zoneId: '' as number | '',
+    active: true,
+  })
+
   const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: loadUsers,
   })
 
+  const zonesQuery = useQuery({
+    queryKey: ['zones'],
+    queryFn: loadZones,
+  })
+
   const users = usersQuery.data ?? []
+  const zones = zonesQuery.data ?? []
   const activeUsers = users.filter((user) => Boolean(user.active)).length
   const coordinators = users.filter((user) => user.role === 'coordinator').length
   const employees = users.filter((user) => user.role === 'employee').length
+
+  const createMutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      handleCloseForm()
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof updateUser>[1] }) => updateUser(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      handleCloseForm()
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+
+  const handleOpenForm = (user?: UserItem) => {
+    if (user) {
+      setEditingUser(user)
+      setFormData({
+        username: user.username,
+        password: '',
+        name: user.name,
+        email: user.email ?? '',
+        phone: user.phone ?? '',
+        dni: user.dni ?? '',
+        role: user.role,
+        zoneId: user.zone_id ?? '',
+        active: user.active ?? true,
+      })
+    } else {
+      setEditingUser(null)
+      setFormData({
+        username: '',
+        password: '',
+        name: '',
+        email: '',
+        phone: '',
+        dni: '',
+        role: 'employee',
+        zoneId: '',
+        active: true,
+      })
+    }
+    setIsFormVisible(true)
+  }
+
+  const handleCloseForm = () => {
+    setIsFormVisible(false)
+    setEditingUser(null)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const dataToSubmit = {
+      ...formData,
+      zoneId: formData.zoneId === '' ? null : Number(formData.zoneId),
+    }
+
+    if (editingUser?.id) {
+      // Remove password if not changing
+      if (!dataToSubmit.password) delete (dataToSubmit as Partial<typeof dataToSubmit>).password;
+      updateMutation.mutate({ id: editingUser.id, data: dataToSubmit })
+    } else {
+      createMutation.mutate(dataToSubmit)
+    }
+  }
+
+  const handleDelete = (id: number) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+      deleteMutation.mutate(id)
+    }
+  }
 
   return (
     <>
@@ -40,6 +145,86 @@ export function UsersPage() {
         </article>
       </section>
 
+      {isFormVisible ? (
+        <section className="table-card resource-shell-card" style={{ marginBottom: '2rem' }}>
+          <div className="section-head-row">
+            <div>
+              <strong>{editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}</strong>
+              <p className="table-note">Completa los datos del trabajador.</p>
+            </div>
+            <button className="secondary-button" onClick={handleCloseForm} type="button">
+              Cancelar
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ padding: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>Nombre *</label>
+                <input required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              </div>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>Usuario (Login) *</label>
+                <input required value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
+              </div>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>{editingUser ? 'Contraseña (dejar en blanco para no cambiar)' : 'Contraseña *'}</label>
+                <input type="password" required={!editingUser} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>Email *</label>
+                <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+              </div>
+              <div className="input-group" style={{ flex: '1 1 150px' }}>
+                <label>Teléfono</label>
+                <input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+              </div>
+              <div className="input-group" style={{ flex: '1 1 150px' }}>
+                <label>DNI</label>
+                <input value={formData.dni} onChange={(e) => setFormData({ ...formData, dni: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              <div className="input-group" style={{ flex: '1 1 150px' }}>
+                <label>Rol *</label>
+                <select required value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as typeof formData.role })}>
+                  <option value="employee">Empleado</option>
+                  <option value="coordinator">Coordinador</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              <div className="input-group" style={{ flex: '1 1 200px' }}>
+                <label>Zona</label>
+                <select value={formData.zoneId} onChange={(e) => setFormData({ ...formData, zoneId: e.target.value === '' ? '' : Number(e.target.value) })}>
+                  <option value="">Sin zona</option>
+                  {zones.map(zone => (
+                    <option key={zone.id} value={zone.id}>{zone.name}</option>
+                  ))}
+                </select>
+              </div>
+              {editingUser && (
+                <div className="input-group" style={{ flex: '1 1 100px', display: 'flex', alignItems: 'center', marginTop: '1.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} />
+                    Usuario Activo
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div className="inline-actions" style={{ marginTop: '1rem' }}>
+              <button className="primary-button" disabled={createMutation.isPending || updateMutation.isPending} type="submit">
+                {editingUser ? 'Guardar Cambios' : 'Crear Usuario'}
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
+
       <section className="table-card resource-shell-card">
         <div className="section-head-row">
           <div>
@@ -48,7 +233,11 @@ export function UsersPage() {
               Datos procedentes de /users, incluyendo zona, calendario y banderas de permisos serializadas por el backend.
             </p>
           </div>
-          <span className="status-pill">Legacy /users</span>
+          {!isFormVisible && (
+            <button className="primary-button" onClick={() => handleOpenForm()} type="button">
+              + Nuevo Usuario
+            </button>
+          )}
         </div>
 
         {usersQuery.isLoading ? <p className="empty-text">Cargando usuarios...</p> : null}
@@ -65,9 +254,27 @@ export function UsersPage() {
                       @{user.username} · {user.email}
                     </span>
                   </div>
-                  <span className={`status-pill ${user.active ? 'success' : 'danger'}`}>
-                    {user.role} · {user.active ? 'activo' : 'inactivo'}
-                  </span>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span className={`status-pill ${user.active ? 'success' : 'danger'}`}>
+                      {user.role} · {user.active ? 'activo' : 'inactivo'}
+                    </span>
+                    <button
+                      className="secondary-button"
+                      onClick={() => handleOpenForm(user)}
+                      type="button"
+                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="secondary-button"
+                      onClick={() => handleDelete(user.id)}
+                      type="button"
+                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#e53e3e', borderColor: '#fc8181' }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
 
                 <div className="legacy-detail-grid">
