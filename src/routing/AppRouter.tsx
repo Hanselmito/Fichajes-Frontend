@@ -2,20 +2,26 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '../auth/AuthProvider'
 import { useAuth } from '../auth/useAuth'
 import { AppShell } from '../components/AppShell'
+import { BolsaAnotacionesPage } from '../pages/BolsaAnotacionesPage'
+import { BreaksPage } from '../pages/BreaksPage'
+import { CalendarsPage } from '../pages/CalendarsPage'
 import { ClientsPage } from '../pages/ClientsPage'
 import { ContractPage } from '../pages/ContractPage'
 import { DashboardPage } from '../pages/DashboardPage'
+import { FicharPage } from '../pages/FicharPage'
+import { IncidenciasPage } from '../pages/IncidenciasPage'
 import { LoginPage } from '../pages/LoginPage'
+import { ModificationsPage } from '../pages/ModificationsPage'
+import { NotificationsPage } from '../pages/NotificationsPage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { QuadrantsPage } from '../pages/QuadrantsPage'
-import { RecordsPage } from '../pages/RecordsPage'
 import { ReadinessPage } from '../pages/ReadinessPage'
+import { RecordsPage } from '../pages/RecordsPage'
 import { ReportsPage } from '../pages/ReportsPage'
+import { SchedulesPage } from '../pages/SchedulesPage'
 import { UsersPage } from '../pages/UsersPage'
 import { VacationsPage } from '../pages/VacationsPage'
 import { ZonesPage } from '../pages/ZonesPage'
-import { SchedulesPage } from '../pages/SchedulesPage'
-import { FicharPage } from '../pages/FicharPage'
 
 function ProtectedRoutes() {
   const { initializing, isAuthenticated } = useAuth()
@@ -41,6 +47,12 @@ function ProtectedRoutes() {
         <Route path="vacations" element={<VacationsPage />} />
         <Route path="quadrants" element={<QuadrantsPage />} />
         <Route path="schedules" element={<SchedulesPage />} />
+        <Route path="bolsa-anotaciones" element={<BolsaAnotacionesPage />} />
+        <Route path="breaks" element={<BreaksPage />} />
+        <Route path="calendars" element={<CalendarsPage />} />
+        <Route path="incidencias" element={<IncidenciasPage />} />
+        <Route path="modifications" element={<ModificationsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="contract" element={<ContractPage />} />
         <Route path="readiness" element={<ReadinessPage />} />
         <Route path="workspace/:sectionId" element={<PlaceholderPage />} />
