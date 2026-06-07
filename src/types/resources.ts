@@ -15,3 +15,7 @@ export type ZoneItem = components['schemas']['ZoneSummary']
 export type QuadrantItem = components['schemas']['QuadrantItem']
 export type QuadrantDetail = components['schemas']['QuadrantResourceResponse']['quadrant']
 export type QuadrantAssignment = components['schemas']['QuadrantAssignmentItem']
+
+export type CalendarItem = components['schemas']['CalendarItem']
+export type CalendarHolidayItem = components['schemas']['CalendarHolidayItem']
+export type ZoneHolidayItem = components['schemas']['ZoneHolidayItem']
