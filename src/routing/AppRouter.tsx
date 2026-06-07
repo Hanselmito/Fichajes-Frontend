@@ -19,8 +19,11 @@ import { ReadinessPage } from '../pages/ReadinessPage'
 import { RecordsPage } from '../pages/RecordsPage'
 import { ReportsPage } from '../pages/ReportsPage'
 import { SchedulesPage } from '../pages/SchedulesPage'
+import { ServicesPage } from '../pages/ServicesPage'
+import { TolerancePage } from '../pages/TolerancePage'
 import { UsersPage } from '../pages/UsersPage'
 import { VacationsPage } from '../pages/VacationsPage'
+import { ZoneHolidaysPage } from '../pages/ZoneHolidaysPage'
 import { ZonesPage } from '../pages/ZonesPage'
 
 function ProtectedRoutes() {
@@ -53,6 +56,9 @@ function ProtectedRoutes() {
         <Route path="incidencias" element={<IncidenciasPage />} />
         <Route path="modifications" element={<ModificationsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="tolerance" element={<TolerancePage />} />
+        <Route path="zone-holidays" element={<ZoneHolidaysPage />} />
         <Route path="contract" element={<ContractPage />} />
         <Route path="readiness" element={<ReadinessPage />} />
         <Route path="workspace/:sectionId" element={<PlaceholderPage />} />

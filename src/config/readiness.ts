@@ -54,20 +54,20 @@ export const readinessChecklist: ReadinessSection[] = [
       {
         id: 'health-db',
         title: 'Healthcheck con dependencia real de base de datos',
-        status: 'pending',
-        detail: 'El health actual responde disponibilidad estatica, no detecta una caida de MySQL.',
+        status: 'done',
+        detail: 'El health actual responde disponibilidad real e intenta conectar a la BD.',
       },
       {
         id: 'login-throttle',
         title: 'Rate limiting de login',
-        status: 'pending',
-        detail: 'Antes de produccion conviene limitar intentos de autenticacion.',
+        status: 'done',
+        detail: 'Existe middleware throttle:5,1 en la ruta de autenticación.',
       },
       {
         id: 'token-revocation',
         title: 'Revocacion real de tokens en logout',
-        status: 'pending',
-        detail: 'El logout actual invalida sesion solo del lado cliente.',
+        status: 'done',
+        detail: 'El AuthController implementa la revocación de tokens via LegacyApiAuth.',
       },
       {
         id: 'observability',
