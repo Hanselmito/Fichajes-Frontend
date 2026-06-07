@@ -13,6 +13,12 @@ export const sectionRouteMap: Record<string, string> = {
   schedules: '/schedules',
   employee_schedules: '/schedules',
   tolerance: '/schedules',
+  bolsa_anotaciones: '/bolsa-anotaciones',
+  breaks: '/breaks',
+  calendars: '/calendars',
+  incidencias: '/incidencias',
+  modifications: '/modifications',
+  notifications: '/notifications',
   contract: '/contract',
   readiness: '/readiness',
 }
