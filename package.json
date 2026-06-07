@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.14",
+    "html5-qrcode": "^2.3.8",
     "openapi-fetch": "^0.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
