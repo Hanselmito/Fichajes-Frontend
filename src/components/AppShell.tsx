@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useState } from 'react'
 
@@ -6,14 +6,19 @@ export function AppShell() {
   const { user, capabilities, logout } = useAuth()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false)
+  const location = useLocation()
+  const path = location.pathname
 
   const visibleSections = Object.entries(capabilities?.navigation ?? {})
     .filter(([, visible]) => visible)
     .map(([key]) => key)
 
+  const isFicharGroup = path.startsWith('/fichar') || path === '/records'
+  const isMisCosasGroup = path === '/' || path.startsWith('/bolsa-anotaciones') || path.startsWith('/vacations') || path.startsWith('/quadrants')
+
   return (
     <div id="app">
-      <div id="mainApp" className="">
+      <div id="mainApp" className={isFicharGroup || isMisCosasGroup ? 'has-subtabs' : ''}>
         <div className="container" id="mainContainer">
           <div className="header">
             <div className="header-content">
@@ -113,14 +118,14 @@ export function AppShell() {
 
           <div className="tabs" id="mainTabs">
             {['coordinator', 'employee'].includes(user?.role ?? '') && visibleSections.includes('records') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/records">
+              <NavLink className={`tab-btn main-tab-btn ${isFicharGroup ? 'active' : ''}`} to="/fichar">
                 <div className="main-tab-icon">⏱️</div>
                 <span className="main-tab-label">Fichar</span>
               </NavLink>
             )}
             
             {visibleSections.includes('dashboard') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/">
+              <NavLink className={`tab-btn main-tab-btn ${isMisCosasGroup ? 'active' : ''}`} to="/">
                 <div className="main-tab-icon">👥</div>
                 <span className="main-tab-label">{user?.role === 'employee' ? 'Mis Cosas' : 'Empleados'}</span>
               </NavLink>
@@ -159,6 +164,29 @@ export function AppShell() {
                 <div className="main-tab-icon">🗺️</div>
                 <span className="main-tab-label">Zonas</span>
               </NavLink>
+            )}
+          </div>
+
+          <div className="subtabs" id="subTabs">
+            {isFicharGroup && (
+              <>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/fichar">Fichar</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/records">{user?.role === 'employee' ? 'Mis Fichajes' : 'Todos los Fichajes'}</NavLink>
+              </>
+            )}
+            {isMisCosasGroup && user?.role === 'employee' && (
+              <>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/bolsa-anotaciones">Mi Bolsa de Horas</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/vacations">Vacaciones</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/quadrants">Mi Cuadrante</NavLink>
+              </>
+            )}
+            {isMisCosasGroup && ['admin', 'coordinator'].includes(user?.role ?? '') && (
+              <>
+                <NavLink className={`subtab-btn ${path === '/' ? 'active' : ''}`} to="/">Dashboard</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/bolsa-anotaciones">Bolsa de horas</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/vacations">Vacaciones</NavLink>
+              </>
             )}
           </div>
 

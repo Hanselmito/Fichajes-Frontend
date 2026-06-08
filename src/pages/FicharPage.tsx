@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
-import { PageHeader } from '../components/PageHeader'
 
 type QrScannerState = 'idle' | 'scanning' | 'processing' | 'success' | 'error'
 
@@ -143,17 +142,75 @@ export function FicharPage() {
     }
   }
 
-  return (
-    <>
-      <PageHeader
-        eyebrow="Control Horario"
-        subtitle="Escanea el código QR de un cliente o zona para registrar tu entrada o salida."
-        title="Fichar con QR"
-      />
+  const handleManualPunch = async (type: 'entrada' | 'salida') => {
+    setScannerState('processing')
+    setStatusMessage(`Registrando ${type} manual (Teletrabajo)...`)
 
-      <section className="table-card resource-shell-card" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+    try {
+      const payload = {
+        type: type,
+        qrCode: null,
+        latitude: null as number | null,
+        longitude: null as number | null,
+      }
+
+      if ('geolocation' in navigator) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 })
+          })
+          payload.latitude = position.coords.latitude
+          payload.longitude = position.coords.longitude
+        } catch (geoError) {
+          console.warn('No se pudo obtener la geolocalización a tiempo:', geoError)
+        }
+      }
+
+      const result = await withAccessRefresh(() => apiClient.POST('/records', {
+        body: payload
+      }))
+
+      if (result.error) {
+        throw new Error(getErrorMessage(result.error, 'Error al registrar el fichaje manual'))
+      }
+
+      setScannerState('success')
+      setStatusMessage(`¡Fichaje manual de ${type} registrado con éxito!`)
+      
+      setTimeout(() => {
+        setScannerState('idle')
+        setStatusMessage('')
+      }, 3000)
+
+    } catch (error) {
+      console.error(error)
+      setScannerState('error')
+      setStatusMessage(error instanceof Error ? error.message : 'Error desconocido')
+      setTimeout(() => {
+        setScannerState('idle')
+        setStatusMessage('')
+      }, 4000)
+    }
+  }
+
+  const handleBreak = async (breakType: 'comida' | 'cafe' | 'personal' | 'fin') => {
+    setStatusMessage(`Procesando descanso: ${breakType}...`)
+    // Simulation of break for now
+    setTimeout(() => {
+        setStatusMessage(`Descanso (${breakType}) procesado (simulado).`)
+        setTimeout(() => setStatusMessage(''), 3000)
+    }, 1000)
+  }
+
+  return (
+    <div className="card">
+      <h2>⏱️ Registrar Fichaje</h2>
+
+      <div className="card fichar-qr-card">
+        <h3>📱 Fichaje en Zona/Cliente con QR</h3>
+        <p className="fichar-card-copy">Escanea el código QR de tu zona o cliente para registrar entrada o salida:</p>
         
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
           <label style={{ marginRight: '1rem', fontWeight: 'bold' }}>
             <input 
               type="radio" 
@@ -179,15 +236,19 @@ export function FicharPage() {
         </div>
 
         {scannerState === 'idle' && (
-          <button className="primary-button" onClick={startScanner} style={{ padding: '0.75rem 2rem', fontSize: '1.1rem' }}>
-            📷 Escanear QR para Fichar
-          </button>
+          <div style={{ textAlign: 'center' }}>
+            <button className="btn btn-primary" onClick={startScanner} style={{ padding: '0.75rem 2rem', fontSize: '1.1rem' }}>
+              📷 Escanear QR
+            </button>
+          </div>
         )}
 
         {scannerState === 'scanning' && (
-          <button className="secondary-button" onClick={stopScanner}>
-            Cancelar Escaneo
-          </button>
+          <div style={{ textAlign: 'center' }}>
+            <button className="btn btn-secondary" onClick={stopScanner}>
+              Cancelar Escaneo
+            </button>
+          </div>
         )}
 
         {statusMessage && (
@@ -196,11 +257,42 @@ export function FicharPage() {
           </div>
         )}
 
-        <div id="qr-reader-container" style={{ marginTop: '2rem', display: scannerState === 'idle' || scannerState === 'success' ? 'none' : 'block' }}>
+        <div id="qr-reader-container" className="fichar-qr-reader" style={{ marginTop: '2rem', display: scannerState === 'idle' || scannerState === 'success' ? 'none' : 'block' }}>
           <div id="qr-reader" ref={readerRef} style={{ width: '100%', margin: '0 auto', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}></div>
         </div>
+      </div>
 
-      </section>
-    </>
+      <div className="card fichar-breaks-card">
+          <h3>☕ Descansos</h3>
+          <div className="fichar-actions-row fichar-actions-row-tight">
+              <button className="btn btn-break-meal btn-action-wide" onClick={() => handleBreak('comida')}>
+                  🍽️ Comida
+              </button>
+              <button className="btn btn-break-coffee btn-action-wide" onClick={() => handleBreak('cafe')}>
+                  ☕ Café
+              </button>
+              <button className="btn btn-break-personal btn-action-wide" onClick={() => handleBreak('personal')}>
+                  ⏸️ Personal
+              </button>
+              <button className="btn btn-danger btn-action-wide" onClick={() => handleBreak('fin')}>
+                  ⏹️ Finalizar
+              </button>
+          </div>
+      </div>
+
+      <div className="card fichar-manual-card">
+          <h3>🖱️ Fichaje Rápido (Manual)</h3>
+          <p className="fichar-manual-helper">Úsalo solo si no puedes escanear el QR</p>
+          <p className="fichar-manual-note"><em>Se registrará como teletrabajo</em></p>
+          <div className="fichar-actions-row">
+              <button className="btn btn-success btn-fichar-main" onClick={() => handleManualPunch('entrada')}>
+                  ✅ ENTRADA
+              </button>
+              <button className="btn btn-danger btn-fichar-main" onClick={() => handleManualPunch('salida')}>
+                  ❌ SALIDA
+              </button>
+          </div>
+      </div>
+    </div>
   )
 }
