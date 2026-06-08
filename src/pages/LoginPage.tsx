@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { loginFeatureCards } from '../config/navigation'
-import brandMark from '../assets/brand-mark.svg'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -29,81 +27,47 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login-shell">
-      <section className="hero-panel">
-        <div className="login-brand-block">
-          <img alt="Fichaje" className="brand-logo login-brand-logo" src={brandMark} />
-          <div>
-            <span className="eyebrow">Panel de acceso</span>
-            <h1 className="hero-title">Sistema de Fichaje Profesional</h1>
+    <div id="loginScreen" className="login-container">
+      <div className="login-box">
+        <h1 style={{ textAlign: 'center', marginBottom: '30px', color: '#667eea' }}>🔐 Control Horario</h1>
+        {error && (
+          <div id="loginAlert">
+            <div className="alert alert-error" style={{ marginBottom: '15px' }}>{error}</div>
           </div>
-        </div>
-
-        <div>
-          <p className="hero-copy">
-            Esta version React toma como referencia visual el `index.html` legacy y mantiene el
-            contrato nuevo del backend Laravel: autenticacion, restauracion de sesion y
-            navegacion derivada de `capabilities`.
-          </p>
-        </div>
-
-        <div className="feature-list">
-          {loginFeatureCards.map((feature) => (
-            <div className="feature-item" key={feature.title}>
-              <strong>{feature.title}</strong>
-              <span>{feature.detail}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="login-panel">
-        <div>
-          <span className="eyebrow">Acceso</span>
-          <h2 className="section-title">Entrar al panel</h2>
-          <p className="panel-copy">
-            Usa un usuario real de la base legacy para comprobar permisos, dashboard y renovacion
-            automatica de sesion.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <label htmlFor="username">Usuario</label>
+        )}
+        <form id="loginForm" onSubmit={handleSubmit}>
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Usuario</label>
             <input
-              id="username"
-              autoComplete="username"
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Introduce tu usuario"
+              type="text"
+              id="loginUsername"
+              required
               value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' }}
             />
           </div>
-
-          <div className="input-group">
-            <label htmlFor="password">Contrasena</label>
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Contraseña</label>
             <input
-              id="password"
-              autoComplete="current-password"
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Introduce tu contrasena"
               type="password"
+              id="loginPassword"
+              required
               value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ddd' }}
             />
           </div>
-
-          {error ? <div className="error-banner">{error}</div> : null}
-
-          <div className="inline-actions">
-            <button className="primary-button" disabled={submitting} type="submit">
-              {submitting ? 'Entrando...' : 'Iniciar sesion'}
-            </button>
-          </div>
+          <button 
+            type="submit" 
+            className="btn btn-primary btn-full-width" 
+            disabled={submitting}
+            style={{ width: '100%', padding: '12px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}
+          >
+            {submitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </button>
         </form>
-
-        <div className="hint-box">
-          Backend esperado: `http://127.0.0.1:8000/api` por proxy local de Vite en `5173`.
-        </div>
-      </section>
+      </div>
     </div>
   )
 }
