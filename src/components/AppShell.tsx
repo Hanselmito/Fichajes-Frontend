@@ -12,7 +12,7 @@ export function AppShell() {
 
   return (
     <div id="app">
-      <div id="mainApp">
+      <div id="mainApp" className="">
         <div className="container" id="mainContainer">
           <div className="header">
             <div className="header-content">
@@ -26,11 +26,18 @@ export function AppShell() {
 
               <div className="header-search" aria-label="Buscar">
                 <span className="header-search-icon" aria-hidden="true">⌕</span>
-                <input type="search" placeholder="Buscar empleados, fichajes o reportes" readOnly />
+                <input type="search" id="headerSearch" placeholder="Buscar empleados, fichajes o reportes" readOnly />
               </div>
 
               <div className="user-info">
+                <p id="userName" className="is-hidden"></p>
+                <p id="userRole" className="is-hidden"></p>
                 <div className="header-action-group">
+                  <div className="header-action-wrap">
+                    <button type="button" className="header-action-btn" aria-label="Notificaciones" aria-expanded="false">
+                      <span aria-hidden="true">🔔</span>
+                    </button>
+                  </div>
                   <div className="header-action-wrap">
                     <button type="button" className="header-action-btn header-user-trigger" aria-label="Menú de usuario" aria-expanded="false">
                       <span className="header-user-avatar" id="headerAvatarInitial">
@@ -39,14 +46,11 @@ export function AppShell() {
                       <span className="header-user-chevron" aria-hidden="true">▾</span>
                     </button>
                   </div>
-                  <button
-                    className="secondary-button header-logout-button"
-                    onClick={() => void logout()}
-                    type="button"
-                    style={{ padding: '8px 12px', minHeight: '44px' }}
-                  >
-                    Cerrar sesión
-                  </button>
+                  <div className="header-action-wrap" style={{ marginLeft: '10px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => void logout()}>
+                      Cerrar sesión
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -69,7 +73,9 @@ export function AppShell() {
               <div className="main-tab-icon">📈</div>
               <span className="main-tab-label">Reportes</span>
             </NavLink>
-            {visibleSections.filter(([key]) => !['records', 'users', 'reports'].includes(key)).map(([key]) => (
+            {visibleSections
+              .filter(([key]) => !['records', 'users', 'reports', 'import_gesad'].includes(key)) // Omitir explícitamente la pestaña de Importar
+              .map(([key]) => (
               <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} key={key} to={getSectionPath(key)}>
                 <div className="main-tab-icon">📁</div>
                 <span className="main-tab-label">{sectionLabels[key] ?? key}</span>
@@ -78,7 +84,7 @@ export function AppShell() {
           </div>
 
           <div id="tabsContent">
-            <div className="tab-content active" style={{ padding: '20px 0' }}>
+            <div className="tab-content active" id="tabDashboard">
               <Outlet />
             </div>
           </div>

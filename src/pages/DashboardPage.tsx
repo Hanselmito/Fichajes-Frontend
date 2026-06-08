@@ -1,112 +1,97 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '../auth/useAuth'
 import { loadDashboard } from '../services/dashboardService'
-import { PageHeader } from '../components/PageHeader'
 import { DashboardEmployeeCard } from '../components/DashboardEmployeeCard'
 
 export function DashboardPage() {
-  const { capabilities, user } = useAuth()
+  const [filter, setFilter] = useState<'all' | 'trabajando' | 'ausente' | 'vacaciones'>('all')
+
   const dashboardQuery = useQuery({
     queryKey: ['dashboard'],
     queryFn: loadDashboard,
+    refetchInterval: 30000, // Auto-actualizar cada 30 segundos como el original
   })
-  const todaySummary = dashboardQuery.data?.checkins_summary?.today
-  const historySummary = dashboardQuery.data?.checkins_summary?.history ?? []
-  const employeeCards = dashboardQuery.data?.employees.slice(0, 6) ?? []
 
-  const visibleSections = Object.entries(capabilities?.navigation ?? {})
-    .filter(([, visible]) => visible)
-    .map(([key]) => key)
+  if (dashboardQuery.isLoading) {
+    return <div className="loading">Cargando dashboard...</div>
+  }
+
+  if (dashboardQuery.isError) {
+    return <div className="alert alert-error">Error al cargar dashboard: {dashboardQuery.error.message}</div>
+  }
+
+  const { total = 0, trabajando = 0, ausente = 0, vacaciones = 0, employees = [] } = dashboardQuery.data ?? {}
+
+  const filteredEmployees = filter === 'all' 
+    ? employees 
+    : employees.filter(emp => emp.status === filter)
 
   return (
-    <>
-      <PageHeader
-        action={
-          <span className="ghost-link dashboard-scope-pill">
-            {visibleSections.length} modulos visibles
-          </span>
-        }
-        eyebrow="Operativo"
-        subtitle={`Estado inicial del backend conectado para ${user?.name}. Esta vista se apoya en los datos reales de GET /dashboard y en el lenguaje visual del panel legacy.`}
-        title="Panel general"
-      />
+    <div className="card">
+      <h2>📊 Dashboard en Tiempo Real</h2>
 
-      <section className="metric-grid">
-        <article className="metric-card">
-          <span>Total empleados</span>
-          <p className="metric-value">{dashboardQuery.data?.total ?? '—'}</p>
-        </article>
-        <article className="metric-card">
-          <span>Trabajando</span>
-          <p className="metric-value tone-success">{dashboardQuery.data?.trabajando ?? '—'}</p>
-        </article>
-        <article className="metric-card">
-          <span>Ausentes</span>
-          <p className="metric-value tone-warning">{dashboardQuery.data?.ausente ?? '—'}</p>
-        </article>
-        <article className="metric-card">
-          <span>Vacaciones</span>
-          <p className="metric-value tone-danger">{dashboardQuery.data?.vacaciones ?? '—'}</p>
-        </article>
-      </section>
-
-      <section className="legacy-dashboard-grid">
-        <article className="section-card section-card-highlight">
-          <strong>Resumen operativo del dia</strong>
-          <p className="panel-copy">
-            Hoy: {todaySummary?.total ?? 0} fichajes confirmados · pendientes: {todaySummary?.pending ?? 0}
-          </p>
-
-          <div className="history-strip">
-            {historySummary.map((entry) => (
-              <div className="history-strip-item" key={entry.date}>
-                <strong>{entry.total}</strong>
-                <span>{entry.label}</span>
-                <small>{entry.pending} pendientes</small>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="section-card">
-          <strong>Navegacion permitida</strong>
-          <p className="panel-copy">
-            Secciones efectivamente visibles para este rol y este alcance de zona.
-          </p>
-          <div className="capability-grid">
-            {visibleSections.map((section) => (
-              <span className="status-pill" key={section}>
-                {section}
-              </span>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="table-card">
-        <div className="section-head-row">
-          <div>
-            <strong>Resumen de empleados</strong>
-            <p className="table-note">
-              Tarjetas operativas inspiradas en el overview del panel original.
-            </p>
-          </div>
-          <span className="status-pill">{dashboardQuery.data?.employees.length ?? 0} visibles</span>
+      <div className="dashboard-summary-grid">
+        <div className="stat-card stat-card-green">
+          <h3>🟢 {trabajando}</h3>
+          <p>Trabajando</p>
         </div>
+        <div className="stat-card stat-card-red">
+          <h3>🔴 {ausente}</h3>
+          <p>Ausentes</p>
+        </div>
+        <div className="stat-card stat-card-blue">
+          <h3>🏖️ {vacaciones}</h3>
+          <p>De Vacaciones</p>
+        </div>
+        <div className="stat-card stat-card-purple">
+          <h3>{total}</h3>
+          <p>Total Empleados</p>
+        </div>
+      </div>
 
-        {dashboardQuery.isLoading ? <p className="empty-text">Cargando dashboard...</p> : null}
-        {dashboardQuery.isError ? (
-          <div className="error-banner">{dashboardQuery.error.message}</div>
-        ) : null}
+      <div className="dashboard-filter-row">
+        <label className="dashboard-filter-label">Filtrar:</label>
+        <button 
+          className="btn btn-secondary btn-filter-gap" 
+          style={filter === 'all' ? { outline: '2px solid #333' } : {}}
+          onClick={() => setFilter('all')}
+        >
+          Todos
+        </button>
+        <button 
+          className="btn btn-dashboard-working btn-filter-gap" 
+          style={filter === 'trabajando' ? { outline: '2px solid #333' } : {}}
+          onClick={() => setFilter('trabajando')}
+        >
+          🟢 Trabajando
+        </button>
+        <button 
+          className="btn btn-dashboard-absent btn-filter-gap" 
+          style={filter === 'ausente' ? { outline: '2px solid #333' } : {}}
+          onClick={() => setFilter('ausente')}
+        >
+          🔴 Ausentes
+        </button>
+        <button 
+          className="btn btn-dashboard-vacation" 
+          style={filter === 'vacaciones' ? { outline: '2px solid #333' } : {}}
+          onClick={() => setFilter('vacaciones')}
+        >
+          🏖️ Vacaciones
+        </button>
+      </div>
 
-        {dashboardQuery.data ? (
-          <div className="employee-overview-grid-list">
-            {employeeCards.map((employee) => (
+      <div id="employeesList">
+        {filteredEmployees.length === 0 ? (
+          <p>No hay empleados en este estado.</p>
+        ) : (
+          <div className="dashboard-employees-grid">
+            {filteredEmployees.map((employee) => (
               <DashboardEmployeeCard employee={employee} key={employee.id} />
             ))}
           </div>
-        ) : null}
-      </section>
-    </>
+        )}
+      </div>
+    </div>
   )
 }
