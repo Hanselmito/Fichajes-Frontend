@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PageHeader } from '../components/PageHeader'
 import { loadUsers, createUser, updateUser, deleteUser, loadZones } from '../services/resourceService'
 import type { UserItem } from '../types/resources'
+import { PageHeader } from '../components/PageHeader'
 
 export function UsersPage() {
   const queryClient = useQueryClient()
   const [editingUser, setEditingUser] = useState<UserItem | null>(null)
   const [isFormVisible, setIsFormVisible] = useState(false)
+  const [search, setSearch] = useState('')
 
   const [formData, setFormData] = useState({
     username: '',
@@ -34,8 +35,12 @@ export function UsersPage() {
   const users = usersQuery.data ?? []
   const zones = zonesQuery.data ?? []
   const activeUsers = users.filter((user) => Boolean(user.active)).length
-  const coordinators = users.filter((user) => user.role === 'coordinator').length
-  const employees = users.filter((user) => user.role === 'employee').length
+  const ausencias = users.filter((user) => user.active === false).length // Aproximación
+
+  const filteredUsers = users.filter(user => 
+    !search || user.name.toLowerCase().includes(search.toLowerCase()) || 
+    (user.zone_name && user.zone_name.toLowerCase().includes(search.toLowerCase()))
+  )
 
   const createMutation = useMutation({
     mutationFn: createUser,
@@ -104,7 +109,6 @@ export function UsersPage() {
     }
 
     if (editingUser?.id) {
-      // Remove password if not changing
       if (!dataToSubmit.password) delete (dataToSubmit as Partial<typeof dataToSubmit>).password;
       updateMutation.mutate({ id: editingUser.id, data: dataToSubmit })
     } else {
@@ -118,33 +122,12 @@ export function UsersPage() {
     }
   }
 
+  const getInitials = (name: string) => {
+    return name.split(' ').map((chunk: string) => chunk[0]).join('').slice(0, 2).toUpperCase()
+  }
+
   return (
     <>
-      <PageHeader
-        eyebrow="Usuarios"
-        subtitle="Panel de usuarios con la misma lectura de tarjetas, etiquetas y metadatos operativos del legacy administrativo."
-        title="Gestion de usuarios"
-      />
-
-      <section className="metric-grid module-metric-grid">
-        <article className="metric-card">
-          <span>Total usuarios</span>
-          <p className="metric-value">{users.length}</p>
-        </article>
-        <article className="metric-card">
-          <span>Activos</span>
-          <p className="metric-value tone-success">{activeUsers}</p>
-        </article>
-        <article className="metric-card">
-          <span>Coordinadores</span>
-          <p className="metric-value">{coordinators}</p>
-        </article>
-        <article className="metric-card">
-          <span>Empleados</span>
-          <p className="metric-value tone-warning">{employees}</p>
-        </article>
-      </section>
-
       {isFormVisible ? (
         <section className="table-card resource-shell-card" style={{ marginBottom: '2rem' }}>
           <div className="section-head-row">
@@ -225,92 +208,82 @@ export function UsersPage() {
         </section>
       ) : null}
 
-      <section className="table-card resource-shell-card">
-        <div className="section-head-row">
+      <div className="card employee-overview-shell">
+        <div className="employee-overview-header">
           <div>
-            <strong>Personas y permisos</strong>
-            <p className="table-note">
-              Datos procedentes de /users, incluyendo zona, calendario y banderas de permisos serializadas por el backend.
-            </p>
+            <h2>👥 Vista de empleados</h2>
+            <p>Resumen general con cliente actual, estado y proxima entrada.</p>
           </div>
-          {!isFormVisible && (
-            <button className="primary-button" onClick={() => handleOpenForm()} type="button">
-              + Nuevo Usuario
-            </button>
-          )}
+          <div className="employee-overview-stats">
+            <div className="employee-overview-stat"><strong>{users.length}</strong><span>Empleados</span></div>
+            <div className="employee-overview-stat"><strong>{activeUsers}</strong><span>Activos</span></div>
+            <div className="employee-overview-stat"><strong>{ausencias}</strong><span>Ausencias</span></div>
+          </div>
         </div>
 
-        {usersQuery.isLoading ? <p className="empty-text">Cargando usuarios...</p> : null}
-        {usersQuery.isError ? <div className="error-banner">{usersQuery.error.message}</div> : null}
+        <div className="employee-overview-toolbar">
+          <input 
+            type="search" 
+            className="employee-overview-search" 
+            placeholder="Buscar por empleado, cliente o zona..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+          />
+          <select className="employee-overview-select">
+            <option value="all">Todos los estados</option>
+            <option value="active">Activo</option>
+            <option value="pending">Pendiente de fichar</option>
+          </select>
+          <div className="employee-overview-actions">
+            <button className="btn btn-primary" onClick={() => handleOpenForm()}>➕ Nuevo Coordinador</button>
+            <button className="btn btn-primary" onClick={() => handleOpenForm()}>➕ Nuevo Empleado</button>
+          </div>
+        </div>
 
-        {users.length > 0 ? (
-          <div className="legacy-list-grid">
-            {users.map((user) => (
-              <article className="legacy-list-card" key={user.id}>
-                <div className="legacy-list-card-head">
-                  <div>
-                    <strong>{user.name}</strong>
-                    <span>
-                      @{user.username} · {user.email}
+        {usersQuery.isLoading ? <div className="loading">Cargando vista de empleados...</div> : null}
+        
+        {usersQuery.data ? (
+          <div id="employeeOverviewGrid">
+            <div className="employee-overview-grid">
+              {filteredUsers.map((user) => (
+                <article className="employee-card-overview" key={user.id}>
+                  <div className="employee-card-overview-head">
+                    <div className="employee-card-avatar" aria-hidden="true">{getInitials(user.name)}</div>
+                    <div className="employee-card-identity">
+                      <h3>{user.name}</h3>
+                      <p>{user.zone_name ?? 'Sin zona'}</p>
+                    </div>
+                    <div className="employee-card-menu-wrap">
+                      <button type="button" className="employee-card-menu-btn" onClick={() => handleOpenForm(user)}>✏️</button>
+                      <button type="button" className="employee-card-menu-btn" onClick={() => handleDelete(user.id)}>🗑️</button>
+                    </div>
+                  </div>
+                  <div className="employee-card-overview-meta">
+                    <span className={`employee-status-badge ${user.active ? 'tone-success' : 'tone-danger'}`}>
+                      {user.role} - {user.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                    <span className="employee-card-current-client">
+                      {user.email}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <span className={`status-pill ${user.active ? 'success' : 'danger'}`}>
-                      {user.role} · {user.active ? 'activo' : 'inactivo'}
-                    </span>
-                    {user.role !== 'admin' && (
-                      <>
-                        <button
-                          className="secondary-button"
-                          onClick={() => handleOpenForm(user)}
-                          type="button"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          className="secondary-button"
-                          onClick={() => handleDelete(user.id)}
-                          type="button"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#e53e3e', borderColor: '#fc8181' }}
-                        >
-                          Eliminar
-                        </button>
-                      </>
-                    )}
+                  <div className="employee-card-metrics">
+                    <div className="employee-card-metric">
+                      <span className="employee-card-metric-label">Horas esta semana</span>
+                      <strong>{user.weekly_hours ?? 0}h</strong>
+                      <div className="employee-card-progress"><span data-width="0"></span></div>
+                    </div>
+                    <div className="employee-card-metric">
+                      <span className="employee-card-metric-label">Proxima entrada</span>
+                      <strong>Sin turno asignado</strong>
+                      <small>Ultimo QR cliente: --:--</small>
+                    </div>
                   </div>
-                </div>
-
-                <div className="legacy-detail-grid">
-                  <div>
-                    <span className="meta-label">Zona</span>
-                    <p className="meta-value">{user.zone_name ?? 'Sin zona'}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Calendario</span>
-                    <p className="meta-value">{user.calendar_name ?? 'Sin calendario'}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Horas semanales</span>
-                    <p className="meta-value">{user.weekly_hours ?? 0}h</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Telefono</span>
-                    <p className="meta-value">{user.phone ?? 'Sin telefono'}</p>
-                  </div>
-                </div>
-
-                <div className="capability-grid compact-pill-grid">
-                  {user.can_view_reports ? <span className="status-pill">Reportes</span> : null}
-                  {user.can_view_all_records ? <span className="status-pill">Todos fichajes</span> : null}
-                  {user.can_view_user_overview ? <span className="status-pill">Resumen usuarios</span> : null}
-                  {user.can_view_all_vacations ? <span className="status-pill">Vacaciones globales</span> : null}
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
           </div>
         ) : null}
-      </section>
+      </div>
     </>
   )
 }

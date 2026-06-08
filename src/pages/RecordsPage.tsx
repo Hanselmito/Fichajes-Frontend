@@ -1,118 +1,117 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { PageHeader } from '../components/PageHeader'
 import { loadRecords } from '../services/resourceService'
 
-function formatDateTime(value: string | null | undefined): string {
+function formatDateTime(value: string | null | undefined): { date: string, time: string } {
   if (!value) {
-    return 'Sin fecha'
+    return { date: 'Sin fecha', time: 'Sin hora' }
   }
 
   const parsed = new Date(value)
 
   if (Number.isNaN(parsed.getTime())) {
-    return value
+    return { date: value, time: '' }
   }
 
-  return parsed.toLocaleString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return {
+    date: parsed.toLocaleDateString('es-ES'),
+    time: parsed.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  }
 }
 
 export function RecordsPage() {
+  const [search, setSearch] = useState('')
+
   const recordsQuery = useQuery({
     queryKey: ['records'],
     queryFn: loadRecords,
   })
 
   const records = recordsQuery.data ?? []
-  const entries = records.filter((record) => record.type === 'entrada').length
-  const exits = records.filter((record) => record.type === 'salida').length
-  const pending = records.filter((record) => !record.confirmed).length
+
+  const filteredRecords = records.filter(record => 
+    !search || (record.employee_name && record.employee_name.toLowerCase().includes(search.toLowerCase()))
+  )
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Fichajes"
-        subtitle="Vista real del modulo legacy de fichajes, con actividad reciente, estados y localizacion vinculada a cliente o zona."
-        title="Registro horario"
-      />
+    <div className="card">
+      <h2>🗂️ Todos los Fichajes</h2>
+      <p className="text-muted text-spaced-after">Vista completa de fichajes de todos los empleados</p>
 
-      <section className="metric-grid module-metric-grid">
-        <article className="metric-card">
-          <span>Total cargados</span>
-          <p className="metric-value">{records.length}</p>
-        </article>
-        <article className="metric-card">
-          <span>Entradas</span>
-          <p className="metric-value tone-success">{entries}</p>
-        </article>
-        <article className="metric-card">
-          <span>Salidas</span>
-          <p className="metric-value tone-warning">{exits}</p>
-        </article>
-        <article className="metric-card">
-          <span>Pendientes</span>
-          <p className="metric-value tone-danger">{pending}</p>
-        </article>
-      </section>
+      <div className="fichajes-toolbar">
+        <label className="fichajes-toolbar-label">Buscar empleado:</label>
+        <input 
+          type="text" 
+          className="fichajes-toolbar-input" 
+          placeholder="Nombre del empleado..." 
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button className="btn btn-danger fichajes-toolbar-btn">🗑️ Eliminar Seleccionados (<span id="selectedCount">0</span>)</button>
+      </div>
 
-      <section className="table-card resource-shell-card">
-        <div className="section-head-row">
-          <div>
-            <strong>Actividad reciente</strong>
-            <p className="table-note">
-              Se muestran los ultimos 100 fichajes permitidos por el backend para el usuario autenticado.
-            </p>
-          </div>
-          <span className="status-pill">Legacy /records</span>
-        </div>
+      <div id="todosFichajesContent">
+        {recordsQuery.isLoading ? <div className="loading">Cargando todos los fichajes...</div> : null}
+        
+        {recordsQuery.isError ? <div className="alert alert-error">Error al cargar fichajes</div> : null}
 
-        {recordsQuery.isLoading ? <p className="empty-text">Cargando fichajes...</p> : null}
-        {recordsQuery.isError ? <div className="error-banner">{recordsQuery.error.message}</div> : null}
-
-        {records.length > 0 ? (
-          <div className="legacy-list-grid">
-            {records.map((record) => (
-              <article className="legacy-list-card" key={record.id}>
-                <div className="legacy-list-card-head">
-                  <div>
-                    <strong>{record.employee_name ?? 'Empleado sin nombre'}</strong>
-                    <span>{record.client_name ?? record.zone_name ?? 'Sin ubicacion vinculada'}</span>
-                  </div>
-                  <span className={`status-pill ${record.confirmed ? 'success' : 'warning'}`}>
-                    {record.type} · {record.confirmed ? 'confirmado' : 'pendiente'}
-                  </span>
-                </div>
-
-                <div className="legacy-detail-grid">
-                  <div>
-                    <span className="meta-label">Fecha</span>
-                    <p className="meta-value">{formatDateTime(record.timestamp)}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Dispositivo</span>
-                    <p className="meta-value">{record.device ?? 'Sin dispositivo'}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Teletrabajo</span>
-                    <p className="meta-value">{record.is_teletrabajo ? 'Si' : 'No'}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Coordenadas</span>
-                    <p className="meta-value">
-                      {record.latitude ?? 0}, {record.longitude ?? 0}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+        {recordsQuery.data ? (
+          filteredRecords.length === 0 ? (
+            <p>No hay fichajes registrados para el filtro actual</p>
+          ) : (
+            <div className="table-responsive data-table-shell">
+              <table id="fichajesTable" className="data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="selectAll" /></th>
+                    <th>ID</th>
+                    <th>Empleado</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Tipo</th>
+                    <th>Ubicación</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRecords.map((record) => {
+                    const { date, time } = formatDateTime(record.timestamp)
+                    const location = record.is_teletrabajo ? '💻 Teletrabajo' : (record.client_name ?? record.zone_name ?? record.device ?? 'Sin ubicación')
+                    
+                    return (
+                      <tr key={record.id} data-employee={(record.employee_name ?? '').toLowerCase()}>
+                        <td data-label="Selección" className="table-selection-cell">
+                          <input type="checkbox" className="fichaje-checkbox" value={record.id} />
+                        </td>
+                        <td data-label="ID" className="table-cell-subtle">{record.id}</td>
+                        <td data-label="Empleado" className="table-cell-title">{record.employee_name ?? 'Sin nombre'}</td>
+                        <td data-label="Fecha">{date}</td>
+                        <td data-label="Hora">{time}</td>
+                        <td data-label="Tipo">{record.type === 'entrada' ? '🟢 Entrada' : '🔴 Salida'}</td>
+                        <td data-label="Ubicación" className="table-cell-subtle">{location}</td>
+                        <td data-label="Estado">
+                          {record.confirmed ? (
+                            <span className="badge badge-success">Confirmado</span>
+                          ) : (
+                            <span className="badge badge-warning">Pendiente</span>
+                          )}
+                        </td>
+                        <td data-label="Acciones" className="table-actions-cell">
+                          <div className="table-actions">
+                            <button className="btn btn-secondary btn-compact-action">✏️</button>
+                            <button className="btn btn-danger btn-compact-action">🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : null}
-      </section>
-    </>
+      </div>
+    </div>
   )
 }
