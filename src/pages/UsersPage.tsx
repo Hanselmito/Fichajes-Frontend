@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { loadUsers, createUser, updateUser, deleteUser, loadZones } from '../services/resourceService'
 import type { UserItem } from '../types/resources'
-import { PageHeader } from '../components/PageHeader'
 
 export function UsersPage() {
   const queryClient = useQueryClient()
