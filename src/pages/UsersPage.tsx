@@ -38,8 +38,9 @@ export function UsersPage() {
   const ausencias = users.filter((user) => user.active === false).length // Aproximación
 
   const filteredUsers = users.filter(user => 
-    !search || user.name.toLowerCase().includes(search.toLowerCase()) || 
-    (user.zone_name && user.zone_name.toLowerCase().includes(search.toLowerCase()))
+    (!search || user.name.toLowerCase().includes(search.toLowerCase()) || 
+    (user.zone_name && user.zone_name.toLowerCase().includes(search.toLowerCase()))) &&
+    user.role !== 'admin'
   )
 
   const createMutation = useMutation({
