@@ -23,7 +23,8 @@ export function DashboardEmployeeCard({ employee }: DashboardEmployeeCardProps) 
     statusText = 'Ausente'
   }
 
-  const progressToneClass = employee.percentage >= 100 ? 'is-progress-high' : employee.percentage >= 50 ? 'is-progress-medium' : 'is-progress-low'
+  const percentage = employee.percentage ?? 0
+  const progressToneClass = percentage >= 100 ? 'is-progress-high' : percentage >= 50 ? 'is-progress-medium' : 'is-progress-low'
 
   const formatShortHour = (dateStr?: string | null) => {
     if (!dateStr) return '--:--'
@@ -36,7 +37,7 @@ export function DashboardEmployeeCard({ employee }: DashboardEmployeeCardProps) 
     }
   }
 
-  const buildScheduleText = (s1?: string, e1?: string, s2?: string, e2?: string) => {
+  const buildScheduleText = (s1?: string | null, e1?: string | null, s2?: string | null, e2?: string | null) => {
     const ranges: string[] = []
     if (s1 && e1) ranges.push(`${s1.slice(0, 5)} - ${e1.slice(0, 5)}`)
     if (s2 && e2) ranges.push(`${s2.slice(0, 5)} - ${e2.slice(0, 5)}`)

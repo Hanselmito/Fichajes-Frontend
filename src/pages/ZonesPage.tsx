@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { PageHeader } from '../components/PageHeader'
 import {
   createZone,
   deleteZone,
@@ -116,41 +115,44 @@ export function ZonesPage() {
   }
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Zonas"
-        subtitle="Administración de zonas de trabajo y generación de códigos QR para fichaje."
-        title="Gestión de Zonas"
-      />
+    <div className="card">
+      <h2>🗺️ Gestión de Zonas</h2>
+      <p>Administración de zonas de trabajo y generación de códigos QR para fichaje.</p>
+      
+      <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', marginBottom: '1.5rem' }}>
+        <div>
+          <span className="meta-label">Total zonas:</span>
+          <strong> {totalZones}</strong>
+        </div>
+        <div>
+          <span className="meta-label">Con QR activo:</span>
+          <strong style={{ color: '#38a169' }}> {zonesWithQr}</strong>
+        </div>
+        <div>
+          <span className="meta-label">Sin QR:</span>
+          <strong style={{ color: '#d69e2e' }}> {totalZones - zonesWithQr}</strong>
+        </div>
+      </div>
 
-      <section className="metric-grid module-metric-grid">
-        <article className="metric-card">
-          <span>Total zonas</span>
-          <p className="metric-value">{totalZones}</p>
-        </article>
-        <article className="metric-card">
-          <span>Con QR activo</span>
-          <p className="metric-value tone-success">{zonesWithQr}</p>
-        </article>
-        <article className="metric-card">
-          <span>Sin QR</span>
-          <p className="metric-value tone-warning">{totalZones - zonesWithQr}</p>
-        </article>
-      </section>
+      {!isFormVisible && (
+        <button className="btn btn-primary" onClick={() => handleOpenForm()} type="button" style={{ marginBottom: '1rem' }}>
+          ➕ Nueva Zona
+        </button>
+      )}
 
       {isFormVisible ? (
-        <section className="table-card resource-shell-card" style={{ marginBottom: '2rem' }}>
+        <div style={{ marginBottom: '2rem', border: '1px solid #e2e8f0', padding: '1.5rem', borderRadius: '8px' }}>
           <div className="section-head-row">
             <div>
               <strong>{editingZone ? 'Editar zona' : 'Nueva zona'}</strong>
               <p className="table-note">Completa los datos de la zona de trabajo.</p>
             </div>
-            <button className="secondary-button" onClick={handleCloseForm} type="button">
+            <button className="btn btn-secondary" onClick={handleCloseForm} type="button">
               Cancelar
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ padding: '1rem' }}>
+          <form onSubmit={handleSubmit} style={{ marginTop: '1rem' }}>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               <div className="input-group" style={{ flex: '1 1 300px' }}>
                 <label>Nombre de zona *</label>
@@ -191,18 +193,11 @@ export function ZonesPage() {
                   onChange={(e) => setFormData({ ...formData, province: e.target.value })}
                 />
               </div>
-              <div className="input-group" style={{ flex: '1 1 150px' }}>
-                <label>Región</label>
-                <input
-                  value={formData.regionCode}
-                  onChange={(e) => setFormData({ ...formData, regionCode: e.target.value })}
-                />
-              </div>
             </div>
 
             <div className="inline-actions" style={{ marginTop: '1rem' }}>
               <button
-                className="primary-button"
+                className="btn btn-primary"
                 disabled={createMutation.isPending || updateMutation.isPending}
                 type="submit"
               >
@@ -210,98 +205,85 @@ export function ZonesPage() {
               </button>
             </div>
           </form>
-        </section>
+        </div>
       ) : null}
 
-      <section className="table-card resource-shell-card">
-        <div className="section-head-row">
-          <div>
-            <strong>Listado de zonas</strong>
-            <p className="table-note">Zonas configuradas en el sistema para asignación y fichaje.</p>
-          </div>
-          {!isFormVisible && (
-            <button className="primary-button" onClick={() => handleOpenForm()} type="button">
-              + Nueva Zona
-            </button>
-          )}
+      <div className="section-head-row">
+        <div>
+          <strong>Listado de zonas</strong>
+          <p className="table-note">Zonas configuradas en el sistema para asignación y fichaje.</p>
         </div>
+      </div>
 
-        {zonesQuery.isLoading ? <p className="empty-text">Cargando zonas...</p> : null}
-        {zonesQuery.isError ? (
-          <div className="error-banner">{zonesQuery.error.message}</div>
-        ) : null}
+      {zonesQuery.isLoading ? <p className="empty-text">Cargando zonas...</p> : null}
+      {zonesQuery.isError ? (
+        <div className="alert alert-error">{zonesQuery.error.message}</div>
+      ) : null}
 
-        {zones.length > 0 ? (
-          <div className="legacy-list-grid">
-            {zones.map((zone) => (
-              <article className="legacy-list-card" key={zone.id}>
-                <div className="legacy-list-card-head">
-                  <div>
-                    <strong>{zone.name}</strong>
-                    <span>{zone.address ?? 'Sin dirección'}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+      {zones.length > 0 ? (
+        <div className="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Dirección</th>
+                <th>Código QR</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {zones.map((zone) => (
+                <tr key={zone.id}>
+                  <td>{zone.id}</td>
+                  <td>{zone.name}</td>
+                  <td>{zone.address ? `${zone.address}, ${zone.city || ''}` : 'Sin dirección'}</td>
+                  <td>
+                    {zone.qr_code ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {zone.qr_code}
+                      </span>
+                    ) : 'Sin QR'}
+                  </td>
+                  <td>
                     {zone.id && (
                       <button
-                        className="secondary-button"
+                        className="btn btn-secondary btn-compact-action btn-action-right-gap"
                         onClick={() => handleOpenForm(zone)}
                         type="button"
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                       >
-                        Editar
+                        ✏️ Editar
                       </button>
                     )}
                     {zone.id && (
                       <button
-                        className="secondary-button"
-                        onClick={() => handleDelete(zone.id!)}
+                        className="btn btn-success btn-compact-action btn-action-right-gap"
+                        onClick={() => handleRegenerateQr(zone.id!)}
                         type="button"
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', color: '#e53e3e', borderColor: '#fc8181' }}
+                        style={{ marginLeft: '4px' }}
                       >
-                        Eliminar
+                        🔄 QR
                       </button>
                     )}
-                  </div>
-                </div>
-
-                <div className="legacy-detail-grid">
-                  <div>
-                    <span className="meta-label">Ciudad</span>
-                    <p className="meta-value">{zone.city ?? '---'}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Provincia</span>
-                    <p className="meta-value">{zone.province ?? '---'}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">Código Postal</span>
-                    <p className="meta-value">{zone.postal_code ?? '---'}</p>
-                  </div>
-                  <div>
-                    <span className="meta-label">QR Código</span>
-                    <p className="meta-value" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {zone.qr_code ?? 'Sin QR'}
-                      {zone.id && (
-                        <button
-                          className="secondary-button"
-                          onClick={() => handleRegenerateQr(zone.id!)}
-                          type="button"
-                          style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem' }}
-                          title="Regenerar QR"
-                        >
-                          ↻
-                        </button>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          !zonesQuery.isLoading && <p className="empty-text">No hay zonas configuradas.</p>
-        )}
-      </section>
-    </>
+                    {zone.id && (
+                      <button
+                        className="btn btn-danger btn-compact-action"
+                        onClick={() => handleDelete(zone.id!)}
+                        type="button"
+                        style={{ marginLeft: '4px' }}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        !zonesQuery.isLoading && <p className="empty-text">No hay zonas configuradas.</p>
+      )}
+    </div>
   )
 }

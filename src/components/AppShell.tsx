@@ -1,10 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { sectionLabels } from '../config/navigation'
-import { getSectionPath } from '../services/navigationService'
+import { useState } from 'react'
 
 export function AppShell() {
   const { user, capabilities, logout } = useAuth()
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false)
 
   const visibleSections = Object.entries(capabilities?.navigation ?? {})
     .filter(([, visible]) => visible)
@@ -34,22 +35,76 @@ export function AppShell() {
                 <p id="userRole" className="is-hidden"></p>
                 <div className="header-action-group">
                   <div className="header-action-wrap">
-                    <button type="button" className="header-action-btn" aria-label="Notificaciones" aria-expanded="false">
+                    <button 
+                      type="button" 
+                      className="header-action-btn" 
+                      onClick={() => { setIsNotifMenuOpen(!isNotifMenuOpen); setIsUserMenuOpen(false); }}
+                      aria-label="Notificaciones" 
+                      aria-expanded={isNotifMenuOpen}
+                    >
                       <span aria-hidden="true">🔔</span>
+                      <span className="notification-badge is-hidden" id="notificationBadge">0</span>
                     </button>
+                    {isNotifMenuOpen && (
+                      <div className="header-popover header-notifications-panel active" id="notificationsPanel">
+                        <div className="header-popover-head">
+                            <div>
+                                <strong>Notificaciones</strong>
+                                <small>Mensajes recientes del sistema</small>
+                            </div>
+                            <button type="button" className="header-inline-btn" onClick={() => setIsNotifMenuOpen(false)}>Marcar vistas</button>
+                        </div>
+                        <div className="header-notifications-list" id="notificationsList">
+                            <div className="header-empty-state">No hay notificaciones pendientes.</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="header-action-wrap">
-                    <button type="button" className="header-action-btn header-user-trigger" aria-label="Menú de usuario" aria-expanded="false">
+                    <button 
+                      type="button" 
+                      className="header-action-btn header-user-trigger" 
+                      onClick={() => { setIsUserMenuOpen(!isUserMenuOpen); setIsNotifMenuOpen(false); }}
+                      aria-label="Menú de usuario" 
+                      aria-expanded={isUserMenuOpen}
+                    >
                       <span className="header-user-avatar" id="headerAvatarInitial">
                         {user?.name?.split(' ').map((chunk: string) => chunk[0]).join('').slice(0, 2).toUpperCase() ?? 'SF'}
                       </span>
                       <span className="header-user-chevron" aria-hidden="true">▾</span>
                     </button>
-                  </div>
-                  <div className="header-action-wrap" style={{ marginLeft: '10px' }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => void logout()}>
-                      Cerrar sesión
-                    </button>
+                    
+                    {isUserMenuOpen && (
+                      <div className="header-popover header-user-menu active" id="userMenuPanel">
+                        <div className="header-profile-summary">
+                          <div className="header-profile-avatar" id="headerMenuAvatar">
+                            {user?.name?.split(' ').map((chunk: string) => chunk[0]).join('').slice(0, 2).toUpperCase() ?? 'SF'}
+                          </div>
+                          <div>
+                            <strong id="headerMenuUserName">{user?.name ?? 'Usuario'}</strong>
+                            <span id="headerMenuUserRole">{user?.role === 'admin' ? '👑 Administrador' : user?.role === 'coordinator' ? '👔 Coordinador' : '👷 Empleado'}</span>
+                          </div>
+                        </div>
+                        <div className="header-menu-stats">
+                          <div className="header-menu-stat">
+                            <span>Horas semanales</span>
+                            <strong id="headerWeeklyHours">{user?.weekly_hours ?? '0.0'}h</strong>
+                          </div>
+                        </div>
+                        <div id="workHoursProgress" className="header-hours-progress">
+                          <div className="header-hours-progress-top">
+                            <span id="workHoursText">{user?.weekly_hours ?? '0.0'}h / {user?.weekly_hours ?? '0.0'}h</span>
+                            <span id="workHoursPercent">0%</span>
+                          </div>
+                          <div className="header-hours-progress-track">
+                            <div id="workHoursBar" style={{ width: '0%', backgroundColor: '#ff5252' }}></div>
+                          </div>
+                        </div>
+                        <button type="button" className="header-menu-button" onClick={() => { alert('Mensajes disponible próximamente'); setIsUserMenuOpen(false); }}>Mensajes</button>
+                        <button type="button" className="header-menu-button" onClick={() => { alert('Configuración disponible próximamente'); setIsUserMenuOpen(false); }}>Configuración</button>
+                        <button type="button" className="header-menu-button header-menu-button-danger" onClick={() => void logout()}>Cerrar sesión</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

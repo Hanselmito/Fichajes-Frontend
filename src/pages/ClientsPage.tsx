@@ -20,13 +20,13 @@ export function ClientsPage() {
   const zones = zonesQuery.data ?? []
 
   const filteredClients = clients.filter((client) => {
-    const matchesName = !search || client.name.toLowerCase().includes(search.toLowerCase())
+    const matchesName = !search || (client.name || '').toLowerCase().includes(search.toLowerCase())
     const matchesZone = !zoneFilter || String(client.zone_id) === zoneFilter
     return matchesName && matchesZone
   })
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map((chunk: string) => chunk[0]).join('').slice(0, 2).toUpperCase()
+  const getInitials = (name?: string) => {
+    return (name || '??').split(' ').map((chunk: string) => chunk[0]).join('').slice(0, 2).toUpperCase()
   }
 
   return (

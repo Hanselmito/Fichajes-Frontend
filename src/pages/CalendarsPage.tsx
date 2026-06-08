@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { PageHeader } from '../components/PageHeader'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 
 interface CalendarItem {
@@ -23,56 +22,52 @@ export function CalendarsPage() {
   const calendars = calendarsQuery.data ?? []
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Configuración"
-        subtitle="Definición de calendarios laborales y días festivos."
-        title="Calendarios y Festivos"
-      />
+    <div className="card">
+      <h2>📅 Calendarios y Festivos</h2>
+      <p>Definición de calendarios laborales y días festivos.</p>
+      
+      <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+        <strong>Calendarios Activos: </strong> {calendars.length}
+      </div>
 
-      <section className="metric-grid module-metric-grid">
-        <article className="metric-card">
-          <span>Calendarios Activos</span>
-          <p className="metric-value">{calendars.length}</p>
-        </article>
-      </section>
-
-      <section className="table-card resource-shell-card">
-        <div className="section-head-row">
-          <div>
-            <strong>Listado de Calendarios</strong>
-            <p className="table-note">Calendarios base asignables a empleados o zonas.</p>
-          </div>
+      <div className="section-head-row" style={{ marginTop: '2rem' }}>
+        <div>
+          <strong>Listado de Calendarios</strong>
+          <p className="table-note">Calendarios base asignables a empleados o zonas.</p>
         </div>
+      </div>
 
-        {calendarsQuery.isLoading ? <p className="empty-text">Cargando calendarios...</p> : null}
-        {calendarsQuery.isError ? (
-          <div className="error-banner">{calendarsQuery.error.message}</div>
-        ) : null}
+      {calendarsQuery.isLoading ? <p className="empty-text">Cargando calendarios...</p> : null}
+      {calendarsQuery.isError ? (
+        <div className="alert alert-error">{calendarsQuery.error.message}</div>
+      ) : null}
 
-        {calendars.length > 0 ? (
-          <div className="legacy-list-grid">
-            {calendars.map((cal: CalendarItem) => (
-              <article className="legacy-list-card" key={cal.id}>
-                <div className="legacy-list-card-head">
-                  <div>
-                    <strong>{cal.name || `Calendario #${cal.id}`}</strong>
-                    <span>{cal.year || '---'}</span>
-                  </div>
-                </div>
-                <div className="legacy-detail-grid">
-                  <div>
-                    <span className="meta-label">Comunidad Autónoma</span>
-                    <p className="meta-value">{cal.comunidad_autonoma || '---'}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          !calendarsQuery.isLoading && <p className="empty-text">No hay calendarios definidos.</p>
-        )}
-      </section>
-    </>
+      {calendars.length > 0 ? (
+        <div className="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Año</th>
+                <th>Comunidad Autónoma</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calendars.map((cal: CalendarItem) => (
+                <tr key={cal.id}>
+                  <td>{cal.id}</td>
+                  <td>{cal.name || `Calendario #${cal.id}`}</td>
+                  <td>{cal.year || '---'}</td>
+                  <td>{cal.comunidad_autonoma || '---'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        !calendarsQuery.isLoading && <p className="empty-text">No hay calendarios definidos.</p>
+      )}
+    </div>
   )
 }
