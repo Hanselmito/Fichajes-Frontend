@@ -8,7 +8,7 @@ export function AppShell() {
 
   const visibleSections = Object.entries(capabilities?.navigation ?? {})
     .filter(([, visible]) => visible)
-    .filter(([key]) => !['dashboard'].includes(key))
+    .map(([key]) => key)
 
   return (
     <div id="app">
@@ -57,30 +57,48 @@ export function AppShell() {
           </div>
 
           <div className="tabs" id="mainTabs">
-            <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/">
-              <div className="main-tab-icon">📊</div>
-              <span className="main-tab-label">Dashboard</span>
-            </NavLink>
-            <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/records">
-              <div className="main-tab-icon">🕒</div>
-              <span className="main-tab-label">Fichajes</span>
-            </NavLink>
-            <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/users">
-              <div className="main-tab-icon">👥</div>
-              <span className="main-tab-label">Gestión</span>
-            </NavLink>
-            <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/reports">
-              <div className="main-tab-icon">📈</div>
-              <span className="main-tab-label">Reportes</span>
-            </NavLink>
-            {visibleSections
-              .filter(([key]) => !['records', 'users', 'reports', 'import_gesad'].includes(key)) // Omitir explícitamente la pestaña de Importar
-              .map(([key]) => (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} key={key} to={getSectionPath(key)}>
-                <div className="main-tab-icon">📁</div>
-                <span className="main-tab-label">{sectionLabels[key] ?? key}</span>
+            {visibleSections.includes('dashboard') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/">
+                <div className="main-tab-icon">👥</div>
+                <span className="main-tab-label">Empleados</span>
               </NavLink>
-            ))}
+            )}
+            {visibleSections.includes('records') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/records">
+                <div className="main-tab-icon">🕒</div>
+                <span className="main-tab-label">Fichajes</span>
+              </NavLink>
+            )}
+            {visibleSections.includes('clients') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/clients">
+                <div className="main-tab-icon">👤</div>
+                <span className="main-tab-label">Usuarios</span>
+              </NavLink>
+            )}
+            {visibleSections.includes('users') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/users">
+                <div className="main-tab-icon">⚙️</div>
+                <span className="main-tab-label">Gestión</span>
+              </NavLink>
+            )}
+            {visibleSections.includes('calendars') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/calendars">
+                <div className="main-tab-icon">🗓️</div>
+                <span className="main-tab-label">Calendario</span>
+              </NavLink>
+            )}
+            {visibleSections.includes('reports') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/reports">
+                <div className="main-tab-icon">📊</div>
+                <span className="main-tab-label">Reportes</span>
+              </NavLink>
+            )}
+            {visibleSections.includes('zones') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/zones">
+                <div className="main-tab-icon">🗺️</div>
+                <span className="main-tab-label">Zonas</span>
+              </NavLink>
+            )}
           </div>
 
           <div id="tabsContent">
