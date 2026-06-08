@@ -23,7 +23,7 @@ export function DashboardEmployeeCard({ employee }: DashboardEmployeeCardProps) 
     statusText = 'Ausente'
   }
 
-  const progressToneClass = employee.percentage >= 100 ? 'tone-success' : employee.percentage > 0 ? 'tone-warning' : 'tone-muted'
+  const progressToneClass = employee.percentage >= 100 ? 'is-progress-high' : employee.percentage >= 50 ? 'is-progress-medium' : 'is-progress-low'
 
   const formatShortHour = (dateStr?: string | null) => {
     if (!dateStr) return '--:--'

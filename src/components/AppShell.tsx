@@ -57,43 +57,49 @@ export function AppShell() {
           </div>
 
           <div className="tabs" id="mainTabs">
+            {['coordinator', 'employee'].includes(user?.role ?? '') && visibleSections.includes('records') && (
+              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/records">
+                <div className="main-tab-icon">⏱️</div>
+                <span className="main-tab-label">Fichar</span>
+              </NavLink>
+            )}
+            
             {visibleSections.includes('dashboard') && (
               <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/">
                 <div className="main-tab-icon">👥</div>
-                <span className="main-tab-label">Empleados</span>
+                <span className="main-tab-label">{user?.role === 'employee' ? 'Mis Cosas' : 'Empleados'}</span>
               </NavLink>
             )}
-            {visibleSections.includes('records') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/records">
-                <div className="main-tab-icon">🕒</div>
-                <span className="main-tab-label">Fichajes</span>
-              </NavLink>
-            )}
+            
             {visibleSections.includes('clients') && (
               <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/clients">
                 <div className="main-tab-icon">👤</div>
                 <span className="main-tab-label">Usuarios</span>
               </NavLink>
             )}
-            {visibleSections.includes('users') && (
+            
+            {['admin', 'coordinator'].includes(user?.role ?? '') && visibleSections.includes('users') && (
               <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/users">
                 <div className="main-tab-icon">⚙️</div>
                 <span className="main-tab-label">Gestión</span>
               </NavLink>
             )}
-            {visibleSections.includes('calendars') && (
+            
+            {['admin', 'coordinator'].includes(user?.role ?? '') && visibleSections.includes('calendars') && (
               <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/calendars">
                 <div className="main-tab-icon">🗓️</div>
                 <span className="main-tab-label">Calendario</span>
               </NavLink>
             )}
-            {visibleSections.includes('reports') && (
+            
+            {['admin', 'coordinator'].includes(user?.role ?? '') && visibleSections.includes('reports') && (
               <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/reports">
                 <div className="main-tab-icon">📊</div>
                 <span className="main-tab-label">Reportes</span>
               </NavLink>
             )}
-            {visibleSections.includes('zones') && (
+            
+            {user?.role === 'admin' && visibleSections.includes('zones') && (
               <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/zones">
                 <div className="main-tab-icon">🗺️</div>
                 <span className="main-tab-label">Zonas</span>
