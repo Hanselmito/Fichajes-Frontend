@@ -26,6 +26,14 @@ import { VacationsPage } from '../pages/VacationsPage'
 import { ZoneHolidaysPage } from '../pages/ZoneHolidaysPage'
 import { ZonesPage } from '../pages/ZonesPage'
 
+function DashboardOrRedirect() {
+  const { user } = useAuth()
+  if (user?.role === 'employee') {
+    return <Navigate to="/bolsa-anotaciones" replace />
+  }
+  return <DashboardPage />
+}
+
 function ProtectedRoutes() {
   const { initializing, isAuthenticated } = useAuth()
 
@@ -40,7 +48,7 @@ function ProtectedRoutes() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index element={<DashboardPage />} />
+        <Route index element={<DashboardOrRedirect />} />
         <Route path="fichar" element={<FicharPage />} />
         <Route path="records" element={<RecordsPage />} />
         <Route path="users" element={<UsersPage />} />
