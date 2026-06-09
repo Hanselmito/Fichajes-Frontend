@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { AuthenticatedQrImage } from '../components/AuthenticatedQrImage'
 import {
   createZone,
   deleteZone,
@@ -12,7 +13,9 @@ import type { ZoneItem } from '../types/resources'
 export function ZonesPage() {
   const queryClient = useQueryClient()
   const [editingZone, setEditingZone] = useState<ZoneItem | null>(null)
+  const [qrPreviewZone, setQrPreviewZone] = useState<ZoneItem | null>(null)
   const [isFormVisible, setIsFormVisible] = useState(false)
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
 
   // Form State
   const [formData, setFormData] = useState({
@@ -37,30 +40,38 @@ export function ZonesPage() {
     mutationFn: createZone,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['zones'] })
+      setFeedback({ tone: 'success', message: 'Zona creada correctamente.' })
       handleCloseForm()
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Parameters<typeof updateZone>[1] }) => updateZone(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['zones'] })
+      setFeedback({ tone: 'success', message: 'Zona actualizada correctamente.' })
       handleCloseForm()
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteZone(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['zones'] })
+      setFeedback({ tone: 'success', message: 'Zona eliminada correctamente.' })
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const regenerateQrMutation = useMutation({
     mutationFn: (id: number) => regenerateZoneQr(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['zones'] })
+      setFeedback({ tone: 'success', message: 'QR de zona regenerado correctamente.' })
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const handleOpenForm = (zone?: ZoneItem) => {
@@ -116,6 +127,29 @@ export function ZonesPage() {
 
   return (
     <div className="card">
+      {feedback ? <div className={`status-pill ${feedback.tone === 'success' ? 'success' : 'danger'}`} style={{ marginBottom: '1rem' }}>{feedback.message}</div> : null}
+
+      {qrPreviewZone ? (
+        <div className="modal active" onClick={() => setQrPreviewZone(null)}>
+          <div className="modal-content modal-qr-content" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📱 Código QR</h3>
+            </div>
+            <p><strong>Zona: {qrPreviewZone.name ?? 'Zona sin nombre'}</strong></p>
+            {qrPreviewZone.qr_code ? (
+              <>
+                <AuthenticatedQrImage alt={`QR de ${qrPreviewZone.name ?? 'zona'}`} className="modal-qr-image" code={qrPreviewZone.qr_code} />
+                <p className="modal-qr-code-text">{qrPreviewZone.qr_code}</p>
+              </>
+            ) : <div className="employee-overview-empty">Esta zona todavía no tiene un QR disponible.</div>}
+            <div className="modal-footer-inline-actions" style={{ marginTop: '20px' }}>
+              <button className="btn btn-secondary" onClick={() => setQrPreviewZone(null)} type="button">Cerrar</button>
+              {qrPreviewZone.id ? <button className="btn btn-primary" onClick={() => handleRegenerateQr(qrPreviewZone.id!)} type="button">Regenerar QR</button> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <h2>🗺️ Gestión de Zonas</h2>
       <p>Administración de zonas de trabajo y generación de códigos QR para fichaje.</p>
       
@@ -253,6 +287,15 @@ export function ZonesPage() {
                         type="button"
                       >
                         ✏️ Editar
+                      </button>
+                    )}
+                    {zone.id && (
+                      <button
+                        className="btn btn-primary btn-compact-action btn-action-right-gap"
+                        onClick={() => setQrPreviewZone(zone)}
+                        type="button"
+                      >
+                        Ver QR
                       </button>
                     )}
                     {zone.id && (

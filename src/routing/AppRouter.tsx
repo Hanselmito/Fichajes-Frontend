@@ -51,6 +51,7 @@ function ProtectedRoutes() {
         <Route index element={<DashboardOrRedirect />} />
         <Route path="fichar" element={<FicharPage />} />
         <Route path="records" element={<RecordsPage />} />
+        <Route path="management/records" element={<RecordsPage variant="recent" />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="zones" element={<ZonesPage />} />
