@@ -3,13 +3,12 @@ import { PageHeader } from '../components/PageHeader'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 
 interface NotificationItem {
-  id: string | number;
-  created_at: string;
-  read_at: string | null;
-  data: {
-    title?: string;
-    message?: string;
-  };
+  id: string | number
+  created_at: string
+  is_read: boolean
+  title?: string | null
+  message?: string | null
+  type?: string | null
 }
 
 export function NotificationsPage() {
@@ -18,8 +17,8 @@ export function NotificationsPage() {
     queryFn: async () => {
       const result = await withAccessRefresh(() => apiClient.GET('/notifications'))
       if (result.error) throw new Error(getErrorMessage(result.error, 'Error al cargar notificaciones'))
-      const data = result.data as unknown as { notificaciones?: NotificationItem[] } | NotificationItem[]
-      return (Array.isArray(data) ? data : data.notificaciones) ?? []
+      const data = result.data as unknown as { notifications?: NotificationItem[] } | NotificationItem[]
+      return (Array.isArray(data) ? data : data.notifications) ?? []
     },
   })
 
@@ -37,7 +36,7 @@ export function NotificationsPage() {
         <article className="metric-card">
           <span>Alertas Sin Leer</span>
           <p className="metric-value tone-warning">
-            {notifications.filter((n: NotificationItem) => !n.read_at).length}
+            {notifications.filter((n: NotificationItem) => !n.is_read).length}
           </p>
         </article>
       </section>
@@ -58,17 +57,17 @@ export function NotificationsPage() {
         {notifications.length > 0 ? (
           <div className="legacy-list-grid">
             {notifications.map((notif: NotificationItem) => (
-              <article className="legacy-list-card" key={notif.id} style={{ opacity: notif.read_at ? 0.6 : 1 }}>
+              <article className="legacy-list-card" key={notif.id} style={{ opacity: notif.is_read ? 0.6 : 1 }}>
                 <div className="legacy-list-card-head">
                   <div>
-                    <strong>{notif.data?.title || 'Notificación'}</strong>
+                    <strong>{notif.title || notif.type || 'Notificación'}</strong>
                     <span>{new Date(notif.created_at).toLocaleString()}</span>
                   </div>
-                  {!notif.read_at && <span className="status-pill tone-warning">Nueva</span>}
+                  {!notif.is_read && <span className="status-pill tone-warning">Nueva</span>}
                 </div>
                 <div className="legacy-detail-grid">
                   <div style={{ gridColumn: 'span 2' }}>
-                    <p className="meta-value">{notif.data?.message || '---'}</p>
+                    <p className="meta-value">{notif.message || 'Sin mensaje adicional.'}</p>
                   </div>
                 </div>
               </article>
