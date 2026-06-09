@@ -13,13 +13,15 @@ export function AppShell() {
     .filter(([, visible]) => visible)
     .map(([key]) => key)
 
-  const isFicharGroup = path.startsWith('/fichar') || path === '/records'
+  const isFicharGroup = path.startsWith('/fichar') || path.startsWith('/records')
   const isMisCosasGroup = path === '/' || path.startsWith('/bolsa-anotaciones') || path.startsWith('/vacations') || path.startsWith('/quadrants')
 
   return (
     <div id="app">
-      <div id="mainApp" className={isFicharGroup || isMisCosasGroup ? 'has-subtabs' : ''}>
-        <div className="container" id="mainContainer">
+      <div id="mainApp">
+        {/* SOLUCIÓN AL ERROR DE VISTA: has-subtabs DEBE ir en .container para que el CSS Grid baje el contenido */}
+        <div className={`container ${isFicharGroup || isMisCosasGroup ? 'has-subtabs' : ''}`} id="mainContainer">
+          
           <div className="header">
             <div className="header-content">
               <div className="header-brand">
@@ -36,13 +38,13 @@ export function AppShell() {
               </div>
 
               <div className="user-info">
-                <p id="userName" className="is-hidden"></p>
-                <p id="userRole" className="is-hidden"></p>
                 <div className="header-action-group">
+                  
+                  {/* Botón Notificaciones */}
                   <div className="header-action-wrap">
                     <button 
                       type="button" 
-                      className="header-action-btn" 
+                      className={`header-action-btn ${isNotifMenuOpen ? 'active' : ''}`}
                       onClick={() => { setIsNotifMenuOpen(!isNotifMenuOpen); setIsUserMenuOpen(false); }}
                       aria-label="Notificaciones" 
                       aria-expanded={isNotifMenuOpen}
@@ -65,10 +67,12 @@ export function AppShell() {
                       </div>
                     )}
                   </div>
+
+                  {/* Menú de Usuario */}
                   <div className="header-action-wrap">
                     <button 
                       type="button" 
-                      className="header-action-btn header-user-trigger" 
+                      className={`header-action-btn header-user-trigger ${isUserMenuOpen ? 'active' : ''}`}
                       onClick={() => { setIsUserMenuOpen(!isUserMenuOpen); setIsNotifMenuOpen(false); }}
                       aria-label="Menú de usuario" 
                       aria-expanded={isUserMenuOpen}
@@ -195,6 +199,7 @@ export function AppShell() {
               <Outlet />
             </div>
           </div>
+
         </div>
       </div>
     </div>
