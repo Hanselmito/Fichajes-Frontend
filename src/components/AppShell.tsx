@@ -3,6 +3,7 @@ import { useAuth } from '../auth/useAuth'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
+import { loadDashboard } from '../services/dashboardService'
 
 type HeaderNotification = {
   id: number | string
@@ -43,8 +44,37 @@ export function AppShell() {
     .filter(([, visible]) => visible)
     .map(([key]) => key)
 
-  const isFicharGroup = path.startsWith('/fichar') || path.startsWith('/records')
-  const isMisCosasGroup = path === '/' || path.startsWith('/bolsa-anotaciones') || path.startsWith('/vacations') || path.startsWith('/quadrants')
+  const isAdmin = user?.role === 'admin'
+  const isCoordinator = user?.role === 'coordinator'
+  const isEmployeeRole = user?.role === 'employee'
+  const isAdminOrCoordinator = isAdmin || isCoordinator
+  const isFicharGroup = (isCoordinator || isEmployeeRole) && (path.startsWith('/fichar') || path.startsWith('/records'))
+  const isEmployeeOverviewGroup = isAdminOrCoordinator && (
+    path === '/'
+    || path.startsWith('/users')
+    || path.startsWith('/bolsa-anotaciones')
+    || path.startsWith('/vacations')
+    || (isAdmin && path.startsWith('/records'))
+  )
+  const isEmployeeSelfGroup = isEmployeeRole && (
+    path.startsWith('/bolsa-anotaciones')
+    || path.startsWith('/vacations')
+    || path.startsWith('/quadrants')
+  )
+  const isClientGroup = path.startsWith('/clients') || path.startsWith('/incidencias')
+  const isManagementGroup = isAdmin && (path.startsWith('/management/records') || path.startsWith('/modifications'))
+  const isCalendarGroup = path.startsWith('/calendars')
+  const isReportsGroup = path.startsWith('/reports')
+  const isZonesGroup = path.startsWith('/zones')
+  const hasSubtabs = isFicharGroup || isEmployeeOverviewGroup || isEmployeeSelfGroup || isClientGroup || isManagementGroup
+  const shouldShowDesktopReports = isAdminOrCoordinator
+
+  const dashboardQuery = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: loadDashboard,
+    enabled: shouldShowDesktopReports,
+    refetchInterval: 30000,
+  })
 
   const notificationsQuery = useQuery({
     queryKey: ['header_notifications'],
@@ -72,6 +102,11 @@ export function AppShell() {
 
   const unreadCount = notificationsQuery.data?.unread_count ?? 0
   const recentNotifications = notificationsQuery.data?.notifications ?? []
+  const checkinsSummary = dashboardQuery.data?.checkins_summary
+  const todayCheckins = checkinsSummary?.today?.total ?? 0
+  const pendingCheckins = checkinsSummary?.today?.pending ?? 0
+  const chartItems = (checkinsSummary?.history ?? []).slice(-7)
+  const maxChartValue = Math.max(...chartItems.map((item) => item.total ?? 0), 1)
 
   const handleSearchSubmit = () => {
     const term = searchValue.trim().toLowerCase()
@@ -86,6 +121,10 @@ export function AppShell() {
     }
     if (term.includes('empleado') || term.includes('gestion')) {
       navigate('/users')
+      return
+    }
+    if (term.includes('pendiente') || term.includes('confirm')) {
+      navigate(isAdmin ? '/management/records' : '/records')
       return
     }
     if (term.includes('calend') || term.includes('festiv')) {
@@ -116,7 +155,7 @@ export function AppShell() {
     <div id="app">
       <div id="mainApp">
         {/* SOLUCIÓN AL ERROR DE VISTA: has-subtabs DEBE ir en .container para que el CSS Grid baje el contenido */}
-        <div className={`container ${isFicharGroup || isMisCosasGroup ? 'has-subtabs' : ''}`} id="mainContainer">
+        <div className={`container ${hasSubtabs ? 'has-subtabs' : ''} ${shouldShowDesktopReports ? 'has-desktop-reports' : ''}`} id="mainContainer">
           
           <div className="header">
             <div className="header-content">
@@ -222,50 +261,50 @@ export function AppShell() {
           </div>
 
           <div className="tabs" id="mainTabs">
-            {['coordinator', 'employee'].includes(user?.role ?? '') && visibleSections.includes('records') && (
+            {(isCoordinator || isEmployeeRole) && visibleSections.includes('records') && (
               <NavLink className={`tab-btn main-tab-btn ${isFicharGroup ? 'active' : ''}`} to="/fichar">
                 <div className="main-tab-icon">⏱️</div>
-                <span className="main-tab-label">Fichar</span>
+                <span className="main-tab-label">{isEmployeeRole ? 'Fichajes' : 'Fichaje'}</span>
               </NavLink>
             )}
             
             {visibleSections.includes('dashboard') && (
-              <NavLink className={`tab-btn main-tab-btn ${isMisCosasGroup ? 'active' : ''}`} to="/">
+              <NavLink className={`tab-btn main-tab-btn ${(isEmployeeRole ? isEmployeeSelfGroup : isEmployeeOverviewGroup) ? 'active' : ''}`} to={isEmployeeRole ? '/bolsa-anotaciones' : '/users'}>
                 <div className="main-tab-icon">👥</div>
                 <span className="main-tab-label">{user?.role === 'employee' ? 'Mis Cosas' : 'Empleados'}</span>
               </NavLink>
             )}
             
             {visibleSections.includes('clients') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/clients">
+              <NavLink className={`tab-btn main-tab-btn ${isClientGroup ? 'active' : ''}`} to="/clients">
                 <div className="main-tab-icon">👤</div>
                 <span className="main-tab-label">Usuarios</span>
               </NavLink>
             )}
             
-            {['admin', 'coordinator'].includes(user?.role ?? '') && visibleSections.includes('users') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/users">
+            {isAdmin && visibleSections.includes('users') && (
+              <NavLink className={`tab-btn main-tab-btn ${isManagementGroup ? 'active' : ''}`} to="/modifications">
                 <div className="main-tab-icon">⚙️</div>
                 <span className="main-tab-label">Gestión</span>
               </NavLink>
             )}
             
-            {['admin', 'coordinator'].includes(user?.role ?? '') && visibleSections.includes('calendars') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/calendars">
+            {isAdminOrCoordinator && visibleSections.includes('calendars') && (
+              <NavLink className={`tab-btn main-tab-btn ${isCalendarGroup ? 'active' : ''}`} to="/calendars">
                 <div className="main-tab-icon">🗓️</div>
                 <span className="main-tab-label">Calendario</span>
               </NavLink>
             )}
             
-            {['admin', 'coordinator'].includes(user?.role ?? '') && visibleSections.includes('reports') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/reports">
+            {isAdminOrCoordinator && visibleSections.includes('reports') && (
+              <NavLink className={`tab-btn main-tab-btn ${isReportsGroup ? 'active' : ''}`} to="/reports">
                 <div className="main-tab-icon">📊</div>
                 <span className="main-tab-label">Reportes</span>
               </NavLink>
             )}
             
-            {user?.role === 'admin' && visibleSections.includes('zones') && (
-              <NavLink className={({isActive}) => `tab-btn main-tab-btn ${isActive ? 'active' : ''}`} to="/zones">
+            {isAdminOrCoordinator && visibleSections.includes('zones') && (
+              <NavLink className={`tab-btn main-tab-btn ${isZonesGroup ? 'active' : ''}`} to="/zones">
                 <div className="main-tab-icon">🗺️</div>
                 <span className="main-tab-label">Zonas</span>
               </NavLink>
@@ -276,21 +315,35 @@ export function AppShell() {
             {isFicharGroup && (
               <>
                 <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/fichar">Fichar</NavLink>
-                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/records">{user?.role === 'employee' ? 'Mis Fichajes' : 'Todos los Fichajes'}</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/records">{user?.role === 'employee' ? 'Mis fichajes' : 'Todos los Fichajes'}</NavLink>
               </>
             )}
-            {isMisCosasGroup && user?.role === 'employee' && (
+            {isEmployeeSelfGroup && user?.role === 'employee' && (
               <>
                 <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/bolsa-anotaciones">Mi Bolsa de Horas</NavLink>
                 <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/vacations">Vacaciones</NavLink>
                 <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/quadrants">Mi Cuadrante</NavLink>
               </>
             )}
-            {isMisCosasGroup && ['admin', 'coordinator'].includes(user?.role ?? '') && (
+            {isEmployeeOverviewGroup && isAdminOrCoordinator && (
               <>
-                <NavLink className={`subtab-btn ${path === '/' ? 'active' : ''}`} to="/">Dashboard</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/users">Vista empleados</NavLink>
                 <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/bolsa-anotaciones">Bolsa de horas</NavLink>
+                {isAdmin ? <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/records">Todos los Fichajes</NavLink> : null}
+                <NavLink className={`subtab-btn ${path === '/' ? 'active' : ''}`} to="/">Dashboard</NavLink>
                 <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/vacations">Vacaciones</NavLink>
+              </>
+            )}
+            {isClientGroup && (
+              <>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/clients">Vista de Usuarios</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/incidencias">Incidencias</NavLink>
+              </>
+            )}
+            {isManagementGroup && isAdmin && (
+              <>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/management/records">Fichajes recientes</NavLink>
+                <NavLink className={({isActive}) => `subtab-btn ${isActive ? 'active' : ''}`} to="/modifications">Peticion de Modificacion</NavLink>
               </>
             )}
           </div>
@@ -300,6 +353,54 @@ export function AppShell() {
               <Outlet />
             </div>
           </div>
+
+          {shouldShowDesktopReports ? (
+            <aside className="desktop-reports-sidebar">
+              <div className="desktop-reports-card desktop-reports-card-highlight">
+                <div className="desktop-reports-header">
+                  <div>
+                    <div className="desktop-reports-eyebrow">REPORTES</div>
+                    <h3>Fichajes de hoy</h3>
+                  </div>
+                  <span className="desktop-reports-scope">Vista general</span>
+                </div>
+
+                <div className="desktop-reports-today">
+                  <div>
+                    <strong>{todayCheckins}</strong>
+                    <span>Registrados</span>
+                  </div>
+                  <div className="desktop-reports-today-meta">
+                    <b>{pendingCheckins} pendientes</b>
+                    <small>Se reinicia cada dia</small>
+                  </div>
+                </div>
+
+                <div className="desktop-reports-chart">
+                  {chartItems.map((entry) => {
+                    const totalHeight = Math.max(16, Math.round(((entry.total ?? 0) / maxChartValue) * 100))
+                    const pendingHeight = entry.total ? Math.max(10, Math.round(((entry.pending ?? 0) / Math.max(entry.total, 1)) * totalHeight)) : 0
+
+                    return (
+                      <div className="desktop-reports-chart-item" key={entry.date}>
+                        <span className="desktop-reports-chart-value">{entry.total}</span>
+                        <div className="desktop-reports-chart-track">
+                          <div className="desktop-reports-chart-bar" style={{ height: `${totalHeight}%` }} />
+                          {entry.pending ? <div className="desktop-reports-chart-bar desktop-reports-chart-bar-pending" style={{ height: `${pendingHeight}%` }} /> : null}
+                        </div>
+                        <span className="desktop-reports-chart-label">{(entry.label ?? '').slice(0, 3).toUpperCase()}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="desktop-reports-footnote">
+                  <span>Ultima actualizacion {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>Confirmacion pendiente incluida</span>
+                </div>
+              </div>
+            </aside>
+          ) : null}
 
           <div className={`modal ${isSettingsOpen ? 'active' : ''}`} onClick={() => setIsSettingsOpen(false)}>
             <div className="settings-modal-content" onClick={(event) => event.stopPropagation()}>

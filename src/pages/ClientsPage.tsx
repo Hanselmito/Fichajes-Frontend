@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
-import { getApiBaseUrl } from '../api/config'
 import { useAuth } from '../auth/useAuth'
+import { AuthenticatedQrImage } from '../components/AuthenticatedQrImage'
 import { loadClients, loadZones } from '../services/resourceService'
 import { loadDashboard } from '../services/dashboardService'
 import type { ClientItem } from '../types/resources'
@@ -254,10 +254,10 @@ export function ClientsPage() {
             <div className="modal-qr-body">
               <div className="modal-qr-image-wrap">
                 {qrPreviewClient.qr_code ? (
-                  <img
+                  <AuthenticatedQrImage
                     alt={`QR de ${qrPreviewClient.name ?? 'usuario'}`}
                     className="modal-qr-image"
-                    src={`${getApiBaseUrl()}/qr-generator?code=${encodeURIComponent(qrPreviewClient.qr_code)}&size=280`}
+                    code={qrPreviewClient.qr_code}
                   />
                 ) : (
                   <div className="employee-overview-empty">Este usuario todavía no tiene un QR disponible.</div>
