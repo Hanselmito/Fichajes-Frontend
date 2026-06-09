@@ -7,6 +7,8 @@ import { getStoredAccessToken } from '../auth/session'
 export function ReportsPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | ''>('')
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [downloadingMode, setDownloadingMode] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
 
   const statsQuery = useQuery({
     queryKey: ['reportStats'],
@@ -30,6 +32,8 @@ export function ReportsPage() {
 
   const handleDownload = async (mode: string, extension: string) => {
     try {
+      setDownloadingMode(mode)
+      setFeedback(null)
       const token = getStoredAccessToken()
       const url = `${getApiBaseUrl().replace(/\/$/, '')}/reports/${mode}`
       const response = await fetch(url, {
@@ -47,9 +51,12 @@ export function ReportsPage() {
       a.click()
       a.remove()
       window.URL.revokeObjectURL(downloadUrl)
+      setFeedback({ tone: 'success', message: `Reporte ${extension.toUpperCase()} descargado correctamente.` })
     } catch (error) {
       console.error('Download error:', error)
-      alert('Hubo un problema descargando el reporte')
+      setFeedback({ tone: 'danger', message: 'Hubo un problema descargando el reporte.' })
+    } finally {
+      setDownloadingMode(null)
     }
   }
 
@@ -57,6 +64,8 @@ export function ReportsPage() {
     <div className="card reports-tab-shell">
       <h2>📊 Informes y Horas Trabajadas</h2>
       <p style={{ marginBottom: '1.5rem', color: '#4a5568' }}>Extracción de datos para nóminas, totales del sistema y desglose de horas trabajadas por empleado.</p>
+
+      {feedback ? <div className={`status-pill ${feedback.tone === 'success' ? 'success' : 'danger'}`} style={{ marginBottom: '1rem' }}>{feedback.message}</div> : null}
 
       <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem' }}>
         <div>
@@ -83,13 +92,13 @@ export function ReportsPage() {
           </div>
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <button className="btn btn-primary" onClick={() => handleDownload('csv', 'csv')} type="button" style={{ width: '100%', justifyContent: 'center' }}>
-              Descargar CSV (Excel)
+              {downloadingMode === 'csv' ? 'Descargando CSV...' : 'Descargar CSV (Excel)'}
             </button>
             <button className="btn btn-secondary" onClick={() => handleDownload('text', 'txt')} type="button" style={{ width: '100%', justifyContent: 'center' }}>
-              Descargar Informe TXT
+              {downloadingMode === 'text' ? 'Descargando TXT...' : 'Descargar Informe TXT'}
             </button>
             <button className="btn btn-secondary" onClick={() => handleDownload('json', 'json')} type="button" style={{ width: '100%', justifyContent: 'center' }}>
-              Descargar Informe JSON
+              {downloadingMode === 'json' ? 'Descargando JSON...' : 'Descargar Informe JSON'}
             </button>
           </div>
         </div>

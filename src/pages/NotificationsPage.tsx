@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { PageHeader } from '../components/PageHeader'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 
@@ -12,14 +13,53 @@ interface NotificationItem {
 }
 
 export function NotificationsPage() {
+  const queryClient = useQueryClient()
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+
   const notificationsQuery = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', showUnreadOnly],
     queryFn: async () => {
-      const result = await withAccessRefresh(() => apiClient.GET('/notifications'))
+      const result = await withAccessRefresh(() => apiClient.GET('/notifications', {
+        params: { query: { unreadOnly: showUnreadOnly, limit: 100 } },
+      }))
       if (result.error) throw new Error(getErrorMessage(result.error, 'Error al cargar notificaciones'))
       const data = result.data as unknown as { notifications?: NotificationItem[] } | NotificationItem[]
       return (Array.isArray(data) ? data : data.notifications) ?? []
     },
+  })
+
+  const readMutation = useMutation({
+    mutationFn: async (notificationId: string | number) => {
+      const result = await withAccessRefresh(() => apiClient.PUT('/notifications/{notificationId}/read', {
+        params: { path: { notificationId: Number(notificationId) } },
+      }))
+      if (result.error || !result.data?.success) {
+        throw new Error(getErrorMessage(result.error, 'No se pudo marcar la notificación como leída'))
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+
+  const readAllMutation = useMutation({
+    mutationFn: async () => {
+      const result = await withAccessRefresh(() => apiClient.PUT('/notifications/read-all'))
+      if (result.error || !result.data?.success) {
+        throw new Error(getErrorMessage(result.error, 'No se pudieron marcar como leídas'))
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (notificationId: string | number) => {
+      const result = await withAccessRefresh(() => apiClient.DELETE('/notifications/{notificationId}', {
+        params: { path: { notificationId: Number(notificationId) } },
+      }))
+      if (result.error || !result.data?.success) {
+        throw new Error(getErrorMessage(result.error, 'No se pudo eliminar la notificación'))
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   })
 
   const notifications = notificationsQuery.data ?? []
@@ -47,6 +87,14 @@ export function NotificationsPage() {
             <strong>Historial de Notificaciones</strong>
             <p className="table-note">Mensajes automáticos recibidos por tu cuenta.</p>
           </div>
+          <div className="inline-actions">
+            <button className="secondary-button" onClick={() => setShowUnreadOnly((current) => !current)} type="button">
+              {showUnreadOnly ? 'Ver todas' : 'Solo sin leer'}
+            </button>
+            <button className="primary-button" disabled={readAllMutation.isPending} onClick={() => readAllMutation.mutate()} type="button">
+              Marcar todas leídas
+            </button>
+          </div>
         </div>
 
         {notificationsQuery.isLoading ? <p className="empty-text">Cargando notificaciones...</p> : null}
@@ -63,7 +111,11 @@ export function NotificationsPage() {
                     <strong>{notif.title || notif.type || 'Notificación'}</strong>
                     <span>{new Date(notif.created_at).toLocaleString()}</span>
                   </div>
-                  {!notif.is_read && <span className="status-pill tone-warning">Nueva</span>}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {!notif.is_read ? <span className="status-pill tone-warning">Nueva</span> : <span className="status-pill">Leída</span>}
+                    {!notif.is_read ? <button className="secondary-button" onClick={() => readMutation.mutate(notif.id)} type="button">Marcar leída</button> : null}
+                    <button className="secondary-button" onClick={() => deleteMutation.mutate(notif.id)} type="button" style={{ color: '#b42318', borderColor: '#fecaca' }}>Eliminar</button>
+                  </div>
                 </div>
                 <div className="legacy-detail-grid">
                   <div style={{ gridColumn: 'span 2' }}>

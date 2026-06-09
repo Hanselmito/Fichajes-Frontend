@@ -16,6 +16,9 @@ export function VacationsPage() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<'requests' | 'confirmed'>('requests')
   const [isFormVisible, setIsFormVisible] = useState(false)
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
+  const [decision, setDecision] = useState<{ type: 'approve' | 'reject' | 'delete'; id: number } | null>(null)
+  const [decisionReason, setDecisionReason] = useState('')
   const [formData, setFormData] = useState({
     type: 'vacaciones' as 'vacaciones' | 'asuntos_propios',
     startDate: '',
@@ -47,10 +50,10 @@ export function VacationsPage() {
       queryClient.invalidateQueries({ queryKey: ['vacationRequests'] })
       setIsFormVisible(false)
       setFormData({ type: 'vacaciones', startDate: '', endDate: '', reason: '' })
-      window.alert('Solicitud enviada con éxito')
+      setFeedback({ tone: 'success', message: 'Solicitud enviada con éxito.' })
     },
     onError: (error: Error) => {
-      window.alert(error.message)
+      setFeedback({ tone: 'danger', message: error.message })
     }
   })
 
@@ -59,40 +62,53 @@ export function VacationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vacationRequests'] })
       queryClient.invalidateQueries({ queryKey: ['vacations'] })
+      setDecision(null)
+      setDecisionReason('')
+      setFeedback({ tone: 'success', message: 'Solicitud aprobada correctamente.' })
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const rejectMutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) => rejectVacationRequest(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vacationRequests'] })
+      setDecision(null)
+      setDecisionReason('')
+      setFeedback({ tone: 'success', message: 'Solicitud rechazada correctamente.' })
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const deleteVacationMutation = useMutation({
     mutationFn: deleteVacation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vacations'] })
+      setDecision(null)
+      setDecisionReason('')
+      setFeedback({ tone: 'success', message: 'Vacación eliminada correctamente.' })
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
-  const handleApprove = (id: number) => {
-    if (window.confirm('¿Aprobar esta solicitud?')) {
-      approveMutation.mutate({ id, reason: '' })
-    }
-  }
+  const handleApprove = (id: number) => setDecision({ type: 'approve', id })
+  const handleReject = (id: number) => setDecision({ type: 'reject', id })
+  const handleDeleteVacation = (id: number) => setDecision({ type: 'delete', id })
 
-  const handleReject = (id: number) => {
-    const reason = window.prompt('Motivo del rechazo (opcional):', '')
-    if (reason !== null) {
-      rejectMutation.mutate({ id, reason })
-    }
-  }
+  const handleDecisionSubmit = () => {
+    if (!decision) return
 
-  const handleDeleteVacation = (id: number) => {
-    if (window.confirm('¿Eliminar esta vacación confirmada?')) {
-      deleteVacationMutation.mutate(id)
+    if (decision.type === 'approve') {
+      approveMutation.mutate({ id: decision.id, reason: decisionReason })
+      return
     }
+
+    if (decision.type === 'reject') {
+      rejectMutation.mutate({ id: decision.id, reason: decisionReason })
+      return
+    }
+
+    deleteVacationMutation.mutate(decision.id)
   }
 
   const handleSubmitRequest = (e: React.FormEvent) => {
@@ -118,6 +134,35 @@ export function VacationsPage() {
           <p className="metric-value tone-success">{vacations.length}</p>
         </article>
       </section>
+
+      {feedback ? <div className={`status-pill ${feedback.tone === 'success' ? 'success' : 'danger'}`} style={{ marginBottom: '1rem' }}>{feedback.message}</div> : null}
+
+      {decision ? (
+        <section className="table-card resource-shell-card" style={{ marginBottom: '1.5rem' }}>
+          <div className="section-head-row">
+            <div>
+              <strong>
+                {decision.type === 'approve' ? 'Aprobar solicitud' : decision.type === 'reject' ? 'Rechazar solicitud' : 'Eliminar vacaciones confirmadas'}
+              </strong>
+              <p className="table-note">Confirma la acción antes de continuar.</p>
+            </div>
+            <button className="secondary-button" onClick={() => { setDecision(null); setDecisionReason('') }} type="button">Cancelar</button>
+          </div>
+          {decision.type !== 'delete' ? (
+            <div className="input-group" style={{ paddingTop: '1rem' }}>
+              <label>{decision.type === 'reject' ? 'Motivo del rechazo' : 'Comentario interno (opcional)'}</label>
+              <textarea value={decisionReason} onChange={(event) => setDecisionReason(event.target.value)} />
+            </div>
+          ) : (
+            <p className="table-note" style={{ paddingTop: '1rem' }}>La vacación se eliminará del listado de confirmadas.</p>
+          )}
+          <div className="inline-actions" style={{ paddingTop: '1rem' }}>
+            <button className="primary-button" onClick={handleDecisionSubmit} type="button" disabled={approveMutation.isPending || rejectMutation.isPending || deleteVacationMutation.isPending}>
+              Confirmar acción
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {isFormVisible && (
         <section className="table-card resource-shell-card" style={{ marginBottom: '2rem' }}>
@@ -209,6 +254,7 @@ export function VacationsPage() {
                             className="primary-button" 
                             onClick={() => handleApprove(req.id!)}
                             disabled={approveMutation.isPending}
+                            type="button"
                             style={{ padding: '0.4rem 0.8rem', minHeight: 'auto' }}
                           >
                             Aprobar
@@ -217,6 +263,7 @@ export function VacationsPage() {
                             className="secondary-button" 
                             onClick={() => handleReject(req.id!)}
                             disabled={rejectMutation.isPending}
+                            type="button"
                             style={{ padding: '0.4rem 0.8rem', minHeight: 'auto', color: '#e53e3e', borderColor: '#fc8181' }}
                           >
                             Rechazar
@@ -284,6 +331,7 @@ export function VacationsPage() {
                         <button 
                           className="secondary-button" 
                           onClick={() => handleDeleteVacation(vacation.id!)}
+                          type="button"
                           style={{ padding: '0.2rem 0.5rem', color: '#e53e3e', borderColor: '#fc8181', fontSize: '0.8rem' }}
                         >
                           Eliminar

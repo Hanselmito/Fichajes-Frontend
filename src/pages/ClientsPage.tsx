@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import { loadClients, loadZones } from '../services/resourceService'
+import { loadDashboard } from '../services/dashboardService'
 import type { ClientItem } from '../types/resources'
 
 export function ClientsPage() {
@@ -39,8 +40,14 @@ export function ClientsPage() {
     queryFn: loadZones,
   })
 
+  const dashboardQuery = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: loadDashboard,
+  })
+
   const clients = clientsQuery.data ?? []
   const zones = zonesQuery.data ?? []
+  const dashboardEmployees = dashboardQuery.data?.employees ?? []
   const canDelete = user?.role === 'admin'
 
   const createMutation = useMutation({
@@ -128,7 +135,12 @@ export function ClientsPage() {
   })
 
   const filteredClients = clients.filter((client) => {
-    const matchesName = !search || (client.name || '').toLowerCase().includes(search.toLowerCase())
+    const assignedNames = dashboardEmployees
+      .filter((employee) => employee.current_client_name === client.name || employee.next_assignment?.client_name === client.name)
+      .map((employee) => employee.name)
+      .join(' ')
+      .toLowerCase()
+    const matchesName = !search || (client.name || '').toLowerCase().includes(search.toLowerCase()) || assignedNames.includes(search.toLowerCase())
     const matchesZone = !zoneFilter || String(client.zone_id) === zoneFilter
     return matchesName && matchesZone
   })
@@ -342,6 +354,10 @@ export function ClientsPage() {
             <div className="employee-overview-grid">
               {filteredClients.map((client) => (
                 <article className="employee-card-overview client-overview-card" key={client.id}>
+                  {(() => {
+                    const assignedEmployees = dashboardEmployees.filter((employee) => employee.current_client_name === client.name || employee.next_assignment?.client_name === client.name)
+                    return (
+                      <>
                   <div className="employee-card-overview-head">
                     <div className="employee-card-avatar" aria-hidden="true">{getInitials(client.name)}</div>
                     <div className="employee-card-identity">
@@ -371,10 +387,14 @@ export function ClientsPage() {
                       📞 {client.phone ?? 'Sin telefono'}
                     </span>
                     <div className="client-overview-detail">
-                      <span>Correo</span>
+                      <span>Asignaciones reales</span>
                       <strong className="client-overview-assigned-list">
-                        <span>{client.email ?? 'Sin email'}</span>
+                        {assignedEmployees.length > 0 ? assignedEmployees.slice(0, 3).map((employee) => <span key={employee.id}>{employee.name}</span>) : <span>Sin asignaciones activas</span>}
                       </strong>
+                    </div>
+                    <div className="client-overview-detail">
+                      <span>Correo</span>
+                      <strong>{client.email ?? 'Sin email'}</strong>
                     </div>
                     <div className="client-overview-detail">
                       <span>Direccion</span>
@@ -393,16 +413,19 @@ export function ClientsPage() {
                       <small>{client.zone_name ?? 'Sin zona asignada'}</small>
                     </div>
                     <div className="employee-card-metric">
-                      <span className="employee-card-metric-label">Ubicación</span>
-                      <strong>{client.city ?? 'Sin ciudad'}</strong>
-                      <small>{client.province ?? 'Sin provincia'}</small>
+                      <span className="employee-card-metric-label">Asignados</span>
+                      <strong>{assignedEmployees.length}</strong>
+                      <small>{client.city ?? 'Sin ciudad'} · {client.province ?? 'Sin provincia'}</small>
                     </div>
                   </div>
 
                   <div className="employee-card-actions">
                     <button type="button" className="btn btn-primary employee-card-action" onClick={() => handleRegenerateQr(client)}>Regenerar QR</button>
-                    <button type="button" className="btn btn-secondary employee-card-action" onClick={() => navigate('/quadrants')}>Ver cuadrante</button>
+                    <button type="button" className="btn btn-secondary employee-card-action" onClick={() => navigate(`/quadrants?clientId=${client.id}&clientName=${encodeURIComponent(client.name ?? '')}`)}>Ver cuadrante</button>
                   </div>
+                      </>
+                    )
+                  })()}
                 </article>
               ))}
             </div>

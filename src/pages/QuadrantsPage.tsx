@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/PageHeader'
 import { loadQuadrantDetail, loadQuadrants } from '../services/resourceService'
 import type { QuadrantAssignment } from '../types/resources'
@@ -23,7 +24,15 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export function QuadrantsPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [selectedQuadrantId, setSelectedQuadrantId] = useState<number | null>(null)
+  const [textFilter, setTextFilter] = useState('')
+
+  const contextualClientId = searchParams.get('clientId')
+  const contextualClientName = searchParams.get('clientName') ?? ''
+  const contextualEmployeeName = searchParams.get('employeeName') ?? ''
+  const effectiveTextFilter = (textFilter || contextualClientName || contextualEmployeeName).trim().toLowerCase()
 
   const quadrantsQuery = useQuery({
     queryKey: ['quadrants'],
@@ -46,6 +55,12 @@ export function QuadrantsPage() {
     0,
   )
   const assignments = detailQuery.data?.assignments ?? []
+  const filteredAssignments = assignments.filter((assignment: QuadrantAssignment) => {
+    const matchesClientId = !contextualClientId || String(assignment.client_id) === contextualClientId
+    const searchable = `${assignment.employee_name ?? ''} ${assignment.client_name ?? ''} ${assignment.client_city ?? ''}`.toLowerCase()
+    const matchesText = !effectiveTextFilter || searchable.includes(effectiveTextFilter)
+    return matchesClientId && matchesText
+  })
 
   return (
     <>
@@ -72,7 +87,29 @@ export function QuadrantsPage() {
           <span>Seleccionado</span>
           <p className="metric-value tone-warning">{effectiveSelectedQuadrantId ?? '—'}</p>
         </article>
+        <article className="metric-card">
+          <span>Filtradas</span>
+          <p className="metric-value">{filteredAssignments.length}</p>
+        </article>
       </section>
+
+      {(contextualClientId || contextualClientName || contextualEmployeeName || textFilter) ? (
+        <section className="table-card resource-shell-card" style={{ marginBottom: '1.5rem' }}>
+          <div className="section-head-row">
+            <div>
+              <strong>Contexto activo</strong>
+              <p className="table-note">Filtro aplicado desde usuarios/clientes o búsqueda manual del cuadrante.</p>
+            </div>
+            <button className="secondary-button" onClick={() => { setTextFilter(''); navigate('/quadrants') }} type="button">Limpiar contexto</button>
+          </div>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', paddingTop: '1rem' }}>
+            <div className="input-group" style={{ flex: '1 1 280px' }}>
+              <label>Buscar en asignaciones</label>
+              <input value={textFilter} onChange={(event) => setTextFilter(event.target.value)} placeholder={contextualClientName || contextualEmployeeName || 'Cliente, empleado o ciudad'} />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="quadrant-layout-grid">
         <article className="table-card resource-shell-card">
@@ -142,8 +179,8 @@ export function QuadrantsPage() {
 
           {detailQuery.data ? (
             <div className="legacy-list-grid">
-              {assignments.length > 0 ? (
-                assignments.map((assignment: QuadrantAssignment) => (
+              {filteredAssignments.length > 0 ? (
+                filteredAssignments.map((assignment: QuadrantAssignment) => (
                   <article className="legacy-list-card" key={assignment.id}>
                     <div className="legacy-list-card-head">
                       <div>
@@ -176,7 +213,7 @@ export function QuadrantsPage() {
                   </article>
                 ))
               ) : (
-                <p className="empty-text">Este cuadrante no tiene asignaciones activas.</p>
+                <p className="empty-text">Este cuadrante no tiene asignaciones activas para el contexto seleccionado.</p>
               )}
             </div>
           ) : null}

@@ -1,11 +1,24 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
+
+type HeaderNotification = {
+  id: number | string
+  title?: string | null
+  message?: string | null
+  created_at: string
+  is_read: boolean
+}
 
 export function AppShell() {
   const { user, capabilities, logout } = useAuth()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
   const location = useLocation()
   const path = location.pathname
 
@@ -15,6 +28,72 @@ export function AppShell() {
 
   const isFicharGroup = path.startsWith('/fichar') || path.startsWith('/records')
   const isMisCosasGroup = path === '/' || path.startsWith('/bolsa-anotaciones') || path.startsWith('/vacations') || path.startsWith('/quadrants')
+
+  const notificationsQuery = useQuery({
+    queryKey: ['header_notifications'],
+    queryFn: async () => {
+      const result = await withAccessRefresh(() => apiClient.GET('/notifications', {
+        params: { query: { limit: 5 } },
+      }))
+      if (result.error) throw new Error(getErrorMessage(result.error, 'No se pudieron cargar las notificaciones'))
+      return result.data as { notifications?: HeaderNotification[]; unread_count?: number }
+    },
+  })
+
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      const result = await withAccessRefresh(() => apiClient.PUT('/notifications/read-all'))
+      if (result.error || !result.data?.success) {
+        throw new Error(getErrorMessage(result.error, 'No se pudieron marcar como leídas'))
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['header_notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  })
+
+  const unreadCount = notificationsQuery.data?.unread_count ?? 0
+  const recentNotifications = notificationsQuery.data?.notifications ?? []
+
+  const handleSearchSubmit = () => {
+    const term = searchValue.trim().toLowerCase()
+    if (!term) {
+      navigate('/')
+      return
+    }
+
+    if (term.includes('cliente') || term.includes('usuario')) {
+      navigate('/clients')
+      return
+    }
+    if (term.includes('empleado') || term.includes('gestion')) {
+      navigate('/users')
+      return
+    }
+    if (term.includes('calend') || term.includes('festiv')) {
+      navigate('/calendars')
+      return
+    }
+    if (term.includes('vacaci')) {
+      navigate('/vacations')
+      return
+    }
+    if (term.includes('cuadr')) {
+      navigate('/quadrants')
+      return
+    }
+    if (term.includes('report')) {
+      navigate('/reports')
+      return
+    }
+    if (term.includes('fich')) {
+      navigate('/records')
+      return
+    }
+
+    navigate('/')
+  }
 
   return (
     <div id="app">
@@ -34,7 +113,7 @@ export function AppShell() {
 
               <div className="header-search" aria-label="Buscar">
                 <span className="header-search-icon" aria-hidden="true">⌕</span>
-                <input type="search" id="headerSearch" placeholder="Buscar empleados, fichajes o reportes" readOnly />
+                <input type="search" id="headerSearch" placeholder="Buscar empleados, fichajes o reportes" value={searchValue} onChange={(event) => setSearchValue(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') handleSearchSubmit() }} />
               </div>
 
               <div className="user-info">
@@ -50,7 +129,7 @@ export function AppShell() {
                       aria-expanded={isNotifMenuOpen}
                     >
                       <span aria-hidden="true">🔔</span>
-                      <span className="notification-badge is-hidden" id="notificationBadge">0</span>
+                      <span className={`notification-badge ${unreadCount > 0 ? '' : 'is-hidden'}`} id="notificationBadge">{unreadCount}</span>
                     </button>
                     {isNotifMenuOpen && (
                       <div className="header-popover header-notifications-panel active" id="notificationsPanel">
@@ -59,10 +138,15 @@ export function AppShell() {
                                 <strong>Notificaciones</strong>
                                 <small>Mensajes recientes del sistema</small>
                             </div>
-                            <button type="button" className="header-inline-btn" onClick={() => setIsNotifMenuOpen(false)}>Marcar vistas</button>
+                            <button type="button" className="header-inline-btn" onClick={() => void markAllReadMutation.mutate()}>Marcar vistas</button>
                         </div>
                         <div className="header-notifications-list" id="notificationsList">
-                            <div className="header-empty-state">No hay notificaciones pendientes.</div>
+                            {recentNotifications.length > 0 ? recentNotifications.map((notification) => (
+                              <button key={notification.id} type="button" className="header-menu-button" onClick={() => { navigate('/notifications'); setIsNotifMenuOpen(false) }} style={{ textAlign: 'left', whiteSpace: 'normal', opacity: notification.is_read ? 0.7 : 1 }}>
+                                <strong>{notification.title ?? 'Notificación'}</strong>
+                                <small>{notification.message ?? 'Sin detalle adicional'}</small>
+                              </button>
+                            )) : <div className="header-empty-state">No hay notificaciones pendientes.</div>}
                         </div>
                       </div>
                     )}
@@ -109,8 +193,8 @@ export function AppShell() {
                             <div id="workHoursBar" style={{ width: '0%', backgroundColor: '#ff5252' }}></div>
                           </div>
                         </div>
-                        <button type="button" className="header-menu-button" onClick={() => { alert('Mensajes disponible próximamente'); setIsUserMenuOpen(false); }}>Mensajes</button>
-                        <button type="button" className="header-menu-button" onClick={() => { alert('Configuración disponible próximamente'); setIsUserMenuOpen(false); }}>Configuración</button>
+                        <button type="button" className="header-menu-button" onClick={() => { navigate('/notifications'); setIsUserMenuOpen(false); }}>Mensajes</button>
+                        <button type="button" className="header-menu-button" onClick={() => { navigate(user?.role === 'admin' || user?.role === 'coordinator' ? '/tolerance' : '/vacations'); setIsUserMenuOpen(false); }}>Configuración</button>
                         <button type="button" className="header-menu-button header-menu-button-danger" onClick={() => void logout()}>Cerrar sesión</button>
                       </div>
                     )}
