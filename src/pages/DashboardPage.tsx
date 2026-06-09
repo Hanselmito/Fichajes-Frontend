@@ -21,6 +21,10 @@ export function DashboardPage() {
   }
 
   const { total = 0, trabajando = 0, ausente = 0, vacaciones = 0, employees = [] } = dashboardQuery.data ?? {}
+  const checkinsSummary = dashboardQuery.data?.checkins_summary
+  const todayCheckins = checkinsSummary?.today?.total ?? 0
+  const pendingCheckins = checkinsSummary?.today?.pending ?? 0
+  const checkinHistory = checkinsSummary?.history ?? []
 
   const filteredEmployees = filter === 'all' 
     ? employees 
@@ -47,7 +51,48 @@ export function DashboardPage() {
           <h3>{total}</h3>
           <p>Total Empleados</p>
         </div>
+        <div className="stat-card stat-card-blue">
+          <h3>{todayCheckins}</h3>
+          <p>Fichajes hoy</p>
+        </div>
+        <div className="stat-card stat-card-red">
+          <h3>{pendingCheckins}</h3>
+          <p>Sin confirmar</p>
+        </div>
       </div>
+
+      {checkinHistory.length > 0 ? (
+        <section className="table-card resource-shell-card" style={{ marginBottom: '1.5rem' }}>
+          <div className="section-head-row">
+            <div>
+              <strong>Actividad de fichajes</strong>
+              <p className="table-note">Resumen real de los últimos 7 días con pendientes de confirmación.</p>
+            </div>
+          </div>
+          <div className="legacy-list-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+            {checkinHistory.map((entry) => (
+              <article className="legacy-list-card" key={entry.date}>
+                <div className="legacy-list-card-head">
+                  <div>
+                    <strong>{entry.label}</strong>
+                    <span>{entry.date}</span>
+                  </div>
+                </div>
+                <div className="legacy-detail-grid">
+                  <div>
+                    <span className="meta-label">Total</span>
+                    <p className="meta-value">{entry.total}</p>
+                  </div>
+                  <div>
+                    <span className="meta-label">Pendientes</span>
+                    <p className="meta-value">{entry.pending}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="dashboard-filter-row">
         <label className="dashboard-filter-label">Filtrar:</label>

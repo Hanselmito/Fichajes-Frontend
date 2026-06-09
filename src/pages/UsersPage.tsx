@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { loadUsers, createUser, updateUser, deleteUser, loadZones } from '../services/resourceService'
 import { useAuth } from '../auth/useAuth'
+import { loadDashboard } from '../services/dashboardService'
 import type { UserItem } from '../types/resources'
 
 export function UsersPage() {
@@ -34,17 +35,35 @@ export function UsersPage() {
     queryFn: loadZones,
   })
 
+  const dashboardQuery = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: loadDashboard,
+  })
+
   const users = usersQuery.data ?? []
   const zones = zonesQuery.data ?? []
-  const activeUsers = users.filter((user) => Boolean(user.active)).length
-  const ausencias = users.filter((user) => user.active === false).length // Aproximación
+  const dashboardEmployees = dashboardQuery.data?.employees ?? []
+  const dashboardById = new Map(dashboardEmployees.map((employee) => [Number(employee.id), employee]))
+  const workingUsers = dashboardQuery.data?.trabajando ?? 0
+  const vacationUsers = dashboardQuery.data?.vacaciones ?? 0
+  const inactiveUsers = users.filter((candidate) => !candidate.active).length
 
   const filteredUsers = users.filter(candidate => 
     (!search || candidate.name.toLowerCase().includes(search.toLowerCase()) || 
-    (candidate.zone_name && candidate.zone_name.toLowerCase().includes(search.toLowerCase()))) &&
+    (candidate.zone_name && candidate.zone_name.toLowerCase().includes(search.toLowerCase())) ||
+    (dashboardById.get(candidate.id)?.current_client_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (dashboardById.get(candidate.id)?.next_assignment?.client_name ?? '').toLowerCase().includes(search.toLowerCase())) &&
     (statusFilter === 'all' || (statusFilter === 'active' ? Boolean(candidate.active) : !candidate.active)) &&
     candidate.role !== 'admin'
   )
+
+  const roleOptions = user?.role === 'admin'
+    ? [
+        { value: 'employee', label: 'Empleado' },
+        { value: 'coordinator', label: 'Coordinador' },
+        { value: 'admin', label: 'Administrador' },
+      ]
+    : [{ value: 'employee', label: 'Empleado' }]
 
   const createMutation = useMutation({
     mutationFn: createUser,
@@ -178,15 +197,15 @@ export function UsersPage() {
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               <div className="input-group" style={{ flex: '1 1 150px' }}>
                 <label>Rol *</label>
-                <select required value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as typeof formData.role })}>
-                  <option value="employee">Empleado</option>
-                  <option value="coordinator">Coordinador</option>
-                  <option value="admin">Administrador</option>
+                <select required disabled={user?.role !== 'admin'} value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as typeof formData.role })}>
+                  {roleOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="input-group" style={{ flex: '1 1 200px' }}>
                 <label>Zona</label>
-                <select value={formData.zoneId} onChange={(e) => setFormData({ ...formData, zoneId: e.target.value === '' ? '' : Number(e.target.value) })}>
+                <select disabled={user?.role === 'coordinator'} value={formData.zoneId} onChange={(e) => setFormData({ ...formData, zoneId: e.target.value === '' ? '' : Number(e.target.value) })}>
                   <option value="">Sin zona</option>
                   {zones.map(zone => (
                     <option key={zone.id} value={zone.id}>{zone.name}</option>
@@ -220,8 +239,8 @@ export function UsersPage() {
           </div>
           <div className="employee-overview-stats">
             <div className="employee-overview-stat"><strong>{users.length}</strong><span>Empleados</span></div>
-            <div className="employee-overview-stat"><strong>{activeUsers}</strong><span>Activos</span></div>
-            <div className="employee-overview-stat"><strong>{ausencias}</strong><span>Ausencias</span></div>
+            <div className="employee-overview-stat"><strong>{workingUsers}</strong><span>Trabajando</span></div>
+            <div className="employee-overview-stat"><strong>{vacationUsers + inactiveUsers}</strong><span>Sin disponibilidad</span></div>
           </div>
         </div>
 
@@ -251,6 +270,11 @@ export function UsersPage() {
             <div className="employee-overview-grid">
               {filteredUsers.map((user) => (
                 <article className="employee-card-overview" key={user.id}>
+                  {(() => {
+                    const dashboardEntry = dashboardById.get(user.id)
+                    const nextAssignment = dashboardEntry?.next_assignment
+                    return (
+                      <>
                   <div className="employee-card-overview-head">
                     <div className="employee-card-avatar" aria-hidden="true">{getInitials(user.name)}</div>
                     <div className="employee-card-identity">
@@ -263,25 +287,28 @@ export function UsersPage() {
                     </div>
                   </div>
                   <div className="employee-card-overview-meta">
-                    <span className={`employee-status-badge ${user.active ? 'tone-success' : 'tone-danger'}`}>
-                      {user.role} - {user.active ? 'Activo' : 'Inactivo'}
+                    <span className={`employee-status-badge ${dashboardEntry?.status_display_tone ? `tone-${dashboardEntry.status_display_tone}` : user.active ? 'tone-success' : 'tone-danger'}`}>
+                      {dashboardEntry?.status_display_label ?? `${user.role} - ${user.active ? 'Activo' : 'Inactivo'}`}
                     </span>
                     <span className="employee-card-current-client">
-                      {user.email}
+                      {dashboardEntry?.current_client_name ? `Cliente actual: ${dashboardEntry.current_client_name}` : user.email}
                     </span>
                   </div>
                   <div className="employee-card-metrics">
                     <div className="employee-card-metric">
                       <span className="employee-card-metric-label">Horas esta semana</span>
-                      <strong>{user.weekly_hours ?? 0}h</strong>
-                      <div className="employee-card-progress"><span data-width="0"></span></div>
+                      <strong>{dashboardEntry?.hours_worked_week ?? user.weekly_hours ?? 0}h / {dashboardEntry?.weekly_hours ?? user.weekly_hours ?? 0}h</strong>
+                      <div className="employee-card-progress"><span data-width={dashboardEntry?.percentage ?? 0} style={{ width: `${dashboardEntry?.percentage ?? 0}%` }}></span></div>
                     </div>
                     <div className="employee-card-metric">
                       <span className="employee-card-metric-label">Proxima entrada</span>
-                      <strong>Sin turno asignado</strong>
-                      <small>Ultimo QR cliente: --:--</small>
+                      <strong>{nextAssignment ? `${nextAssignment.start_time?.slice(0, 5) ?? '--:--'} · ${nextAssignment.client_name ?? 'Sin cliente'}` : 'Sin turno asignado'}</strong>
+                      <small>{dashboardEntry?.current_client_time ? `Ultimo QR cliente: ${new Date(dashboardEntry.current_client_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : 'Sin actividad reciente'}</small>
                     </div>
                   </div>
+                      </>
+                    )
+                  })()}
                 </article>
               ))}
             </div>

@@ -24,6 +24,10 @@ export function BolsaAnotacionesPage() {
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [editingAnotacion, setEditingAnotacion] = useState<BolsaAnotacion | null>(null)
   const [isFormVisible, setIsFormVisible] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'hours' | 'notes'>('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [formData, setFormData] = useState({
     date: new Date().toISOString().slice(0, 10),
     text: '',
@@ -117,6 +121,16 @@ export function BolsaAnotacionesPage() {
 
   const anotaciones = bolsaQuery.data ?? []
   const assignableUsers = (usersQuery.data ?? []).filter((candidate) => candidate.role !== 'admin')
+  const filteredAnotaciones = anotaciones.filter((anotacion) => {
+    const matchesText = !searchText || anotacion.text.toLowerCase().includes(searchText.toLowerCase()) || (anotacion.created_by_name ?? '').toLowerCase().includes(searchText.toLowerCase())
+    const matchesType = typeFilter === 'all' || (typeFilter === 'hours' ? anotacion.affects_hours : !anotacion.affects_hours)
+    const matchesStart = !startDate || anotacion.date >= startDate
+    const matchesEnd = !endDate || anotacion.date <= endDate
+    return matchesText && matchesType && matchesStart && matchesEnd
+  })
+  const visibleBalance = filteredAnotaciones.reduce((sum, anotacion) => sum + Number(anotacion.hours_adjustment), 0)
+  const addedHours = filteredAnotaciones.filter((anotacion) => Number(anotacion.hours_adjustment) > 0).reduce((sum, anotacion) => sum + Number(anotacion.hours_adjustment), 0)
+  const subtractedHours = filteredAnotaciones.filter((anotacion) => Number(anotacion.hours_adjustment) < 0).reduce((sum, anotacion) => sum + Number(anotacion.hours_adjustment), 0)
 
   const handleOpenForm = (anotacion?: BolsaAnotacion) => {
     if (anotacion) {
@@ -176,6 +190,18 @@ export function BolsaAnotacionesPage() {
           <span>Anotaciones Totales</span>
           <p className="metric-value">{anotaciones.length}</p>
         </article>
+        <article className="metric-card">
+          <span>Saldo visible</span>
+          <p className={`metric-value ${visibleBalance >= 0 ? 'tone-success' : 'tone-danger'}`}>{visibleBalance >= 0 ? '+' : ''}{visibleBalance.toFixed(2)} h</p>
+        </article>
+        <article className="metric-card">
+          <span>Horas sumadas</span>
+          <p className="metric-value tone-success">+{addedHours.toFixed(2)} h</p>
+        </article>
+        <article className="metric-card">
+          <span>Horas restadas</span>
+          <p className="metric-value tone-danger">{subtractedHours.toFixed(2)} h</p>
+        </article>
       </section>
 
       <section className="table-card resource-shell-card" style={{ marginBottom: '1.5rem' }}>
@@ -202,6 +228,16 @@ export function BolsaAnotacionesPage() {
               + Nueva anotación
             </button>
           ) : null}
+        </div>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'end', marginTop: '1rem' }}>
+          <input className="gestion-filter-input gestion-filter-input-grow" placeholder="Filtrar por texto o creador" value={searchText} onChange={(event) => setSearchText(event.target.value)} />
+          <select className="gestion-filter-input" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}>
+            <option value="all">Todo</option>
+            <option value="hours">Afecta horas</option>
+            <option value="notes">Solo notas</option>
+          </select>
+          <input className="gestion-filter-input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+          <input className="gestion-filter-input" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
         </div>
       </section>
 
@@ -268,9 +304,9 @@ export function BolsaAnotacionesPage() {
           <div className="error-banner">{bolsaQuery.error.message}</div>
         ) : null}
 
-        {targetEmployeeId !== '' && anotaciones.length > 0 ? (
+        {targetEmployeeId !== '' && filteredAnotaciones.length > 0 ? (
           <div className="legacy-list-grid">
-            {anotaciones.map((anotacion: BolsaAnotacion) => (
+            {filteredAnotaciones.map((anotacion: BolsaAnotacion) => (
               <article className="legacy-list-card" key={anotacion.id}>
                 <div className="legacy-list-card-head">
                   <div>
