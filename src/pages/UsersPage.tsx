@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { loadUsers, createUser, updateUser, deleteUser, loadZones } from '../services/resourceService'
+import { useAuth } from '../auth/useAuth'
 import type { UserItem } from '../types/resources'
 
 export function UsersPage() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [editingUser, setEditingUser] = useState<UserItem | null>(null)
   const [isFormVisible, setIsFormVisible] = useState(false)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
   const [formData, setFormData] = useState({
     username: '',
@@ -36,10 +39,11 @@ export function UsersPage() {
   const activeUsers = users.filter((user) => Boolean(user.active)).length
   const ausencias = users.filter((user) => user.active === false).length // Aproximación
 
-  const filteredUsers = users.filter(user => 
-    (!search || user.name.toLowerCase().includes(search.toLowerCase()) || 
-    (user.zone_name && user.zone_name.toLowerCase().includes(search.toLowerCase()))) &&
-    user.role !== 'admin'
+  const filteredUsers = users.filter(candidate => 
+    (!search || candidate.name.toLowerCase().includes(search.toLowerCase()) || 
+    (candidate.zone_name && candidate.zone_name.toLowerCase().includes(search.toLowerCase()))) &&
+    (statusFilter === 'all' || (statusFilter === 'active' ? Boolean(candidate.active) : !candidate.active)) &&
+    candidate.role !== 'admin'
   )
 
   const createMutation = useMutation({
@@ -65,19 +69,19 @@ export function UsersPage() {
     },
   })
 
-  const handleOpenForm = (user?: UserItem) => {
-    if (user) {
-      setEditingUser(user)
+  const handleOpenForm = (userToEdit?: UserItem, defaultRole: 'admin' | 'coordinator' | 'employee' = 'employee') => {
+    if (userToEdit) {
+      setEditingUser(userToEdit)
       setFormData({
-        username: user.username,
+        username: userToEdit.username,
         password: '',
-        name: user.name,
-        email: user.email ?? '',
-        phone: user.phone ?? '',
-        dni: user.dni ?? '',
-        role: user.role,
-        zoneId: user.zone_id ?? '',
-        active: user.active ?? true,
+        name: userToEdit.name,
+        email: userToEdit.email ?? '',
+        phone: userToEdit.phone ?? '',
+        dni: userToEdit.dni ?? '',
+        role: userToEdit.role,
+        zoneId: userToEdit.zone_id ?? '',
+        active: userToEdit.active ?? true,
       })
     } else {
       setEditingUser(null)
@@ -88,7 +92,7 @@ export function UsersPage() {
         email: '',
         phone: '',
         dni: '',
-        role: 'employee',
+        role: defaultRole,
         zoneId: '',
         active: true,
       })
@@ -229,14 +233,14 @@ export function UsersPage() {
             value={search} 
             onChange={e => setSearch(e.target.value)} 
           />
-          <select className="employee-overview-select">
+          <select className="employee-overview-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">Todos los estados</option>
             <option value="active">Activo</option>
-            <option value="pending">Pendiente de fichar</option>
+            <option value="inactive">Inactivo</option>
           </select>
           <div className="employee-overview-actions">
-            <button className="btn btn-primary" onClick={() => handleOpenForm()}>➕ Nuevo Coordinador</button>
-            <button className="btn btn-primary" onClick={() => handleOpenForm()}>➕ Nuevo Empleado</button>
+            {user?.role === 'admin' ? <button className="btn btn-primary" onClick={() => handleOpenForm(undefined, 'coordinator')}>➕ Nuevo Coordinador</button> : null}
+            <button className="btn btn-primary" onClick={() => handleOpenForm(undefined, 'employee')}>➕ Nuevo Empleado</button>
           </div>
         </div>
 

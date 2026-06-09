@@ -3,14 +3,15 @@ import { PageHeader } from '../components/PageHeader'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 
 interface ModificationRequest {
-  id: number;
-  employee_id: number;
-  employee?: {
-    name: string;
-  };
-  status: string;
-  reason: string;
-  original_record_id: number | null;
+  id: number
+  employee_id: number
+  employee_name?: string | null
+  status: string
+  reason: string
+  record_id: number | null
+  original_timestamp?: string | null
+  new_date?: string | null
+  new_time?: string | null
 }
 
 export function ModificationsPage() {
@@ -60,7 +61,7 @@ export function ModificationsPage() {
               <article className="legacy-list-card" key={req.id}>
                 <div className="legacy-list-card-head">
                   <div>
-                    <strong>{req.employee?.name || `Empleado ID: ${req.employee_id}`}</strong>
+                    <strong>{req.employee_name || `Empleado ID: ${req.employee_id}`}</strong>
                     <span>{req.status || 'pendiente'}</span>
                   </div>
                 </div>
@@ -70,8 +71,16 @@ export function ModificationsPage() {
                     <p className="meta-value">{req.reason || '---'}</p>
                   </div>
                   <div>
+                    <span className="meta-label">Fichaje original</span>
+                    <p className="meta-value">{req.record_id ? `#${req.record_id}` : 'Sin fichaje asociado'}</p>
+                  </div>
+                  <div>
                     <span className="meta-label">Fecha original</span>
-                    <p className="meta-value">{req.original_record_id ? `Fichaje #${req.original_record_id}` : 'Fichaje olvidado'}</p>
+                    <p className="meta-value">{req.original_timestamp ? new Date(req.original_timestamp).toLocaleString() : '---'}</p>
+                  </div>
+                  <div>
+                    <span className="meta-label">Cambio solicitado</span>
+                    <p className="meta-value">{req.new_date && req.new_time ? `${req.new_date} ${req.new_time}` : '---'}</p>
                   </div>
                 </div>
               </article>
