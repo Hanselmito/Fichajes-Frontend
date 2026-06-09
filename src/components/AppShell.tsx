@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
 
@@ -18,9 +18,26 @@ export function AppShell() {
   const navigate = useNavigate()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [darkModeEnabled, setDarkModeEnabled] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+
+    return window.localStorage.getItem('fichaje-theme') === 'dark'
+  })
   const [searchValue, setSearchValue] = useState('')
   const location = useLocation()
   const path = location.pathname
+
+  useEffect(() => {
+    document.body.classList.toggle('theme-dark', darkModeEnabled)
+    window.localStorage.setItem('fichaje-theme', darkModeEnabled ? 'dark' : 'light')
+
+    return () => {
+      document.body.classList.remove('theme-dark')
+    }
+  }, [darkModeEnabled])
 
   const visibleSections = Object.entries(capabilities?.navigation ?? {})
     .filter(([, visible]) => visible)
@@ -194,7 +211,7 @@ export function AppShell() {
                           </div>
                         </div>
                         <button type="button" className="header-menu-button" onClick={() => { navigate('/notifications'); setIsUserMenuOpen(false); }}>Mensajes</button>
-                        <button type="button" className="header-menu-button" onClick={() => { navigate(user?.role === 'admin' || user?.role === 'coordinator' ? '/tolerance' : '/vacations'); setIsUserMenuOpen(false); }}>Configuración</button>
+                        <button type="button" className="header-menu-button" onClick={() => { setIsSettingsOpen(true); setIsUserMenuOpen(false); }}>Configuración</button>
                         <button type="button" className="header-menu-button header-menu-button-danger" onClick={() => void logout()}>Cerrar sesión</button>
                       </div>
                     )}
@@ -281,6 +298,31 @@ export function AppShell() {
           <div id="tabsContent">
             <div className="tab-content active" id="tabDashboard">
               <Outlet />
+            </div>
+          </div>
+
+          <div className={`modal ${isSettingsOpen ? 'active' : ''}`} onClick={() => setIsSettingsOpen(false)}>
+            <div className="settings-modal-content" onClick={(event) => event.stopPropagation()}>
+              <div className="modal-header settings-modal-header modal-header-between">
+                <div>
+                  <h3>Configuración</h3>
+                  <p>Personaliza la apariencia de la aplicación.</p>
+                </div>
+                <button className="modal-icon-close-btn" onClick={() => setIsSettingsOpen(false)} type="button">×</button>
+              </div>
+
+              <section className="settings-section">
+                <div className="settings-theme-row">
+                  <div>
+                    <strong>Modo oscuro</strong>
+                    <p>Activa una vista oscura para la interfaz.</p>
+                  </div>
+                  <label className="theme-switch" aria-label="Activar modo oscuro">
+                    <input checked={darkModeEnabled} onChange={(event) => setDarkModeEnabled(event.target.checked)} type="checkbox" />
+                    <span className="theme-switch-slider" />
+                  </label>
+                </div>
+              </section>
             </div>
           </div>
 

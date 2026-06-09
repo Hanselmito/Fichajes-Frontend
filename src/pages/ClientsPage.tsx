@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { apiClient, getErrorMessage, withAccessRefresh } from '../api/client'
+import { getApiBaseUrl } from '../api/config'
 import { useAuth } from '../auth/useAuth'
 import { loadClients, loadZones } from '../services/resourceService'
 import { loadDashboard } from '../services/dashboardService'
@@ -14,7 +15,9 @@ export function ClientsPage() {
   const [search, setSearch] = useState('')
   const [zoneFilter, setZoneFilter] = useState('')
   const [editingClient, setEditingClient] = useState<ClientItem | null>(null)
+  const [qrPreviewClient, setQrPreviewClient] = useState<ClientItem | null>(null)
   const [isFormVisible, setIsFormVisible] = useState(false)
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     dni: '',
@@ -73,8 +76,10 @@ export function ClientsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      setFeedback({ tone: 'success', message: 'Usuario creado correctamente.' })
       handleCloseForm()
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const updateMutation = useMutation({
@@ -102,8 +107,10 @@ export function ClientsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      setFeedback({ tone: 'success', message: 'Usuario actualizado correctamente.' })
       handleCloseForm()
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const deleteMutation = useMutation({
@@ -117,7 +124,9 @@ export function ClientsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      setFeedback({ tone: 'success', message: 'Usuario eliminado correctamente.' })
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const regenerateQrMutation = useMutation({
@@ -131,7 +140,9 @@ export function ClientsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      setFeedback({ tone: 'success', message: 'QR regenerado correctamente.' })
     },
+    onError: (error: Error) => setFeedback({ tone: 'danger', message: error.message }),
   })
 
   const filteredClients = clients.filter((client) => {
@@ -150,6 +161,7 @@ export function ClientsPage() {
   }
 
   const handleOpenForm = (client?: ClientItem) => {
+    setFeedback(null)
     if (client) {
       setEditingClient(client)
       setFormData({
@@ -221,8 +233,69 @@ export function ClientsPage() {
     regenerateQrMutation.mutate(client.id)
   }
 
+  const handleOpenQr = (client: ClientItem) => {
+    setQrPreviewClient(client)
+  }
+
   return (
     <div className="card employee-overview-shell client-overview-shell">
+      {feedback ? (
+        <div className={`status-pill ${feedback.tone === 'success' ? 'success' : 'danger'}`} style={{ marginBottom: '1rem' }}>
+          {feedback.message}
+        </div>
+      ) : null}
+
+      {qrPreviewClient ? (
+        <div className="modal active" onClick={() => setQrPreviewClient(null)}>
+          <div className="modal-content modal-qr-content" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🔳 QR del usuario</h3>
+            </div>
+            <div className="modal-qr-body">
+              <div className="modal-qr-image-wrap">
+                {qrPreviewClient.qr_code ? (
+                  <img
+                    alt={`QR de ${qrPreviewClient.name ?? 'usuario'}`}
+                    className="modal-qr-image"
+                    src={`${getApiBaseUrl()}/qr-generator?code=${encodeURIComponent(qrPreviewClient.qr_code)}&size=280`}
+                  />
+                ) : (
+                  <div className="employee-overview-empty">Este usuario todavía no tiene un QR disponible.</div>
+                )}
+              </div>
+
+              <div className="modal-qr-info">
+                <h4>{qrPreviewClient.name ?? 'Usuario sin nombre'}</h4>
+                <p className="modal-qr-code-text">{qrPreviewClient.qr_code ?? 'Sin código QR'}</p>
+                <div className="client-overview-detail-list">
+                  <div className="client-overview-detail">
+                    <span>Tipo</span>
+                    <strong>{qrPreviewClient.is_office ? 'Centro operativo' : 'Usuario'}</strong>
+                  </div>
+                  <div className="client-overview-detail">
+                    <span>Zona</span>
+                    <strong>{qrPreviewClient.zone_name ?? 'Sin zona'}</strong>
+                  </div>
+                  <div className="client-overview-detail">
+                    <span>Dirección</span>
+                    <strong>{qrPreviewClient.address ? `${qrPreviewClient.address}${qrPreviewClient.city ? `, ${qrPreviewClient.city}` : ''}` : 'Sin dirección'}</strong>
+                  </div>
+                  <div className="client-overview-detail">
+                    <span>Teléfono</span>
+                    <strong>{qrPreviewClient.phone ?? 'Sin teléfono'}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer-inline-actions" style={{ marginTop: '20px' }}>
+              <button className="btn btn-secondary" onClick={() => setQrPreviewClient(null)} type="button">Cerrar</button>
+              <button className="btn btn-primary" onClick={() => qrPreviewClient && handleRegenerateQr(qrPreviewClient)} type="button">Regenerar QR</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {isFormVisible ? (
         <section className="table-card resource-shell-card" style={{ marginBottom: '1.5rem' }}>
           <div className="section-head-row">
@@ -420,7 +493,8 @@ export function ClientsPage() {
                   </div>
 
                   <div className="employee-card-actions">
-                    <button type="button" className="btn btn-primary employee-card-action" onClick={() => handleRegenerateQr(client)}>Regenerar QR</button>
+                    <button type="button" className="btn btn-primary employee-card-action" onClick={() => handleOpenQr(client)}>Ver QR</button>
+                    <button type="button" className="btn btn-secondary employee-card-action" onClick={() => handleRegenerateQr(client)}>Regenerar QR</button>
                     <button type="button" className="btn btn-secondary employee-card-action" onClick={() => navigate(`/quadrants?clientId=${client.id}&clientName=${encodeURIComponent(client.name ?? '')}`)}>Ver cuadrante</button>
                   </div>
                       </>
