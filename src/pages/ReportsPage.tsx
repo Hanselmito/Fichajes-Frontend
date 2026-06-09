@@ -47,7 +47,8 @@ export function ReportsPage() {
       a.click()
       a.remove()
       window.URL.revokeObjectURL(downloadUrl)
-    } catch (e) {
+    } catch (error) {
+      console.error('Download error:', error)
       alert('Hubo un problema descargando el reporte')
     }
   }
